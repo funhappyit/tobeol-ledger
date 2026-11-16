@@ -17,7 +17,7 @@
  *    매번 받기에는 너무 무거워서(실제로 타임아웃으로 수집이 막혔다) 선택 옵션으로 둔다.
  */
 
-import { fetchWithRetry } from './http';
+import { httpGet } from './http';
 
 const RE_SHOPIFY_CURRENCY = /Shopify\.currency\s*=\s*(\{[^}]*\})/;
 
@@ -60,13 +60,13 @@ export function parseShopCurrency(body: unknown): string | null {
  */
 export async function fetchShopCurrency(origin: string): Promise<string | null> {
   try {
-    const response = await fetchWithRetry(`${origin}/meta.json`, { retries: 2 });
+    const result = await httpGet(`${origin}/meta.json`, { retries: 2 });
 
-    if (!response.ok) {
+    if (!result.ok) {
       return null;
     }
 
-    return parseShopCurrency(await response.json());
+    return parseShopCurrency(JSON.parse(result.body));
   } catch {
     return null;
   }
@@ -82,16 +82,16 @@ export async function fetchPresentmentCurrency(
 ): Promise<string | null> {
   try {
     // 700KB 가 넘는 페이지라 기본 타임아웃(20초)으로는 모자란다
-    const response = await fetchWithRetry(`${origin}/products/${encodeURIComponent(probeHandle)}`, {
+    const result = await httpGet(`${origin}/products/${encodeURIComponent(probeHandle)}`, {
       retries: 2,
       timeoutMs: 90000,
     });
 
-    if (!response.ok) {
+    if (!result.ok) {
       return null;
     }
 
-    return parseActiveCurrency(await response.text());
+    return parseActiveCurrency(result.body);
   } catch {
     return null;
   }

@@ -8,7 +8,7 @@
  * handle 은 로케일과 무관하게 같으므로 기본(일본어) 경로만 읽는다.
  */
 
-import { fetchWithRetry } from './http';
+import { httpGet } from './http';
 
 const RE_LOC = /<loc>([^<]+)<\/loc>/g;
 
@@ -36,8 +36,7 @@ function extractLocs(xml: string): string[] {
 
 /** sitemap 인덱스에서 기본 로케일의 상품 sitemap URL만 골라낸다 */
 export async function fetchProductSitemapUrls(origin: string): Promise<string[]> {
-  const response = await fetchWithRetry(`${origin}/sitemap.xml`);
-  const xml = await response.text();
+  const xml = (await httpGet(`${origin}/sitemap.xml`)).body;
   const base = new URL(origin);
 
   return extractLocs(xml).filter((loc) => {
@@ -52,8 +51,7 @@ export async function fetchProductSitemapUrls(origin: string): Promise<string[]>
 
 /** 상품 sitemap 하나에서 handle 목록을 뽑는다 */
 export async function fetchHandlesFromSitemap(sitemapUrl: string): Promise<string[]> {
-  const response = await fetchWithRetry(sitemapUrl);
-  const xml = await response.text();
+  const xml = (await httpGet(sitemapUrl)).body;
   const handles: string[] = [];
 
   for (const loc of extractLocs(xml)) {

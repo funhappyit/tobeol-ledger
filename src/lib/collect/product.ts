@@ -9,7 +9,7 @@
  * 그래서 종류 판정은 product_type 이 아니라 태그를 기준으로 한다.
  */
 
-import { fetchWithRetry } from './http';
+import { httpGet } from './http';
 import { parseTags, splitTags } from './parse-tags';
 import type { CollectedItem, ShopifyProduct } from './types';
 
@@ -28,13 +28,13 @@ export async function fetchProduct(
   handle: string,
 ): Promise<ShopifyProduct | null> {
   const url = `${origin}${localePrefix(locale)}/products/${encodeURIComponent(handle)}.json`;
-  const response = await fetchWithRetry(url);
+  const result = await httpGet(url);
 
-  if (response.status === 404) {
+  if (result.status === 404) {
     return null;
   }
 
-  const body = (await response.json()) as { product?: ShopifyProduct };
+  const body = JSON.parse(result.body) as { product?: ShopifyProduct };
   return body.product ?? null;
 }
 
