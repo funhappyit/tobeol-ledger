@@ -2,7 +2,11 @@
 import { dexTabs } from '@lib/items/dex';
 import type { DexResponse } from '~~/server/api/dex.get';
 
-const { data } = await useFetch<DexResponse>('/api/dex', { key: 'dex:home' });
+// 홈은 캐릭터별 숫자만 쓴다. 굿즈 목록까지 받으면 응답이 수 MB가 된다
+const { data } = await useFetch<DexResponse>('/api/dex', {
+  key: 'dex:counts',
+  query: { counts: '1' },
+});
 
 /** 캐릭터별 바로가기. 수집된 굿즈가 있는 캐릭터만 띄운다 */
 const shortcuts = computed(() => {

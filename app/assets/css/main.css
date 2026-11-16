@@ -18,6 +18,8 @@
   /* 정가 구매 강조색 */
   --fair: #15803d;
   --accent: #e8a33d;
+  /* 배경 모눈. 수첩 느낌을 내는 아주 옅은 선 */
+  --grid: rgba(0, 0, 0, 0.035);
 }
 
 @theme inline {
@@ -42,6 +44,7 @@
     --premium: #fb923c;
     --fair: #4ade80;
     --accent: #e8a33d;
+    --grid: rgba(255, 255, 255, 0.035);
   }
 }
 
@@ -55,4 +58,47 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* 모눈 배경 */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/*
+ * 도감 탭
+ *
+ * 캐릭터마다 색을 달리 주되, 색을 그대로 깔면 어두운 화면에서 눈이 아프다.
+ * 그래서 탭 색(--tint)을 표면색과 섞어 쓴다. 선택된 탭만 표면색 그대로 두고
+ * 테두리와 아래쪽을 패널에 붙여 "패널 위에 얹힌 색인지" 처럼 보이게 한다.
+ */
+.dex-tab {
+  --mix: 26%;
+  background-color: color-mix(in srgb, var(--tint) var(--mix), var(--surface));
+  border-color: color-mix(in srgb, var(--tint) 45%, transparent);
+}
+
+.dex-tab:hover {
+  --mix: 40%;
+}
+
+.dex-tab[aria-current='page'] {
+  background-color: var(--surface);
+  border-color: var(--tint);
+  /* 선택된 탭은 패널과 이어 붙는다 */
+  border-bottom-color: var(--surface);
+}
+
+.dex-badge {
+  background-color: var(--tint);
+  color: #2a2520;
+}
+
+/* 종류 칩을 가로로 넘길 때 스크롤바가 보이면 지저분해서 감춘다 */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

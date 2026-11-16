@@ -12,28 +12,53 @@ import { CHARACTER_TAGS } from '../collect/vocab';
 export const ALL_CHARACTERS = 'all';
 
 /**
- * 탭에 노출할 캐릭터 순서.
- * 공식몰 태그 사용 빈도가 높은 주요 캐릭터를 앞에 둔다.
- * 여기에 없는 캐릭터는 어휘표 등록 순서대로 뒤에 붙는다.
+ * 주요 캐릭터로 묶이지 않는 굿즈를 모으는 탭.
+ * 등장 빈도가 낮은 캐릭터와, 캐릭터 태그가 아예 없는 굿즈(식품·지역 한정 등)가 여기로 온다.
  */
-const TAB_ORDER = [
+export const OTHER_CHARACTERS = 'others';
+
+/**
+ * 탭으로 따로 세울 캐릭터.
+ * 공식몰 태그 사용 빈도가 높은 순이고, 여기에 없는 캐릭터는 "다른 친구들"로 합쳐진다.
+ * 탭이 너무 많으면 고르기 어려워져서 일부러 끊었다.
+ */
+const MAIN_CHARACTERS = [
   'chiikawa',
   'hachiware',
   'usagi',
   'momonga',
-  'kurimanju',
   'rakko',
+  'kurimanju',
   'shisa',
-  'yoroisan',
   'furuhonya',
-  'anoko',
-  'dekatsuyo',
 ];
+
+/**
+ * 탭 색.
+ * 캐릭터를 글자뿐 아니라 색으로도 구분할 수 있게 한 것이라 의미 있는 값은 아니다.
+ * 밝은 화면·어두운 화면 모두에서 쓰려고 바탕에는 이 색을 그대로 깔지 않고
+ * 표면색과 섞어 쓴다(main.css 의 .dex-tab 참고).
+ */
+const TINTS: Record<string, string> = {
+  [ALL_CHARACTERS]: '#b9b2a4',
+  chiikawa: '#f3b6c6',
+  hachiware: '#9fc9ea',
+  usagi: '#f2cf72',
+  momonga: '#c3bbe8',
+  rakko: '#cbb196',
+  kurimanju: '#a9cf9a',
+  shisa: '#f0b478',
+  furuhonya: '#e3a9a9',
+  [OTHER_CHARACTERS]: '#92cdc5',
+};
 
 export interface DexTab {
   code: string;
   nameKo: string;
+  /** 탭 배지에 넣을 한 글자 */
+  short: string;
   href: string;
+  tint: string;
 }
 
 /** 코드 -> 한국어 이름. 어휘표는 태그 기준이라 코드 기준으로 한 번 뒤집어 둔다 */
@@ -44,44 +69,60 @@ for (const def of Object.values(CHARACTER_TAGS)) {
   }
 }
 
-/** 어휘표에 있는 캐릭터 코드 전체를 탭 순서대로 */
-export function characterCodes(): string[] {
-  const known = [...NAME_BY_CODE.keys()];
-  const ordered = TAB_ORDER.filter((code) => NAME_BY_CODE.has(code));
-  const rest = known.filter((code) => !ordered.includes(code));
-
-  return [...ordered, ...rest];
+/** 탭으로 세우지 않고 "다른 친구들"로 합칠 캐릭터 코드 */
+function minorCharacterCodes(): string[] {
+  return [...NAME_BY_CODE.keys()].filter((code) => !MAIN_CHARACTERS.includes(code));
 }
 
-/** 우리가 아는 캐릭터 코드인지. 모르는 경로로 들어오면 404 를 내기 위해 쓴다 */
+/** 경로로 쓸 수 있는 값인지. 모르는 경로로 들어오면 404 를 내기 위해 쓴다 */
 export function isKnownCharacter(code: string): boolean {
-  return code === ALL_CHARACTERS || NAME_BY_CODE.has(code);
+  return code === ALL_CHARACTERS || code === OTHER_CHARACTERS || NAME_BY_CODE.has(code);
 }
 
-/** 탭 목록. 맨 앞은 항상 전체 */
-export function dexTabs(): DexTab[] {
-  return [
-    { code: ALL_CHARACTERS, nameKo: '전체', href: '/dex' },
-    ...characterCodes().map((code) => ({
-      code,
-      nameKo: NAME_BY_CODE.get(code) ?? code,
-      href: `/dex/${code}`,
-    })),
-  ];
+/** 탭에 세울 코드 전체. 전체 -> 주요 캐릭터 -> 다른 친구들 순 */
+export function characterCodes(): string[] {
+  return [...MAIN_CHARACTERS.filter((code) => NAME_BY_CODE.has(code)), OTHER_CHARACTERS];
 }
 
-/** 탭 제목에 쓸 이름 */
 export function characterTitle(code: string): string {
   if (code === ALL_CHARACTERS) {
     return '전체';
   }
+  if (code === OTHER_CHARACTERS) {
+    return '다른 친구들';
+  }
   return NAME_BY_CODE.get(code) ?? code;
+}
+
+export function dexTabs(): DexTab[] {
+  const make = (code: string): DexTab => {
+    const nameKo = characterTitle(code);
+
+    return {
+      code,
+      nameKo,
+      // 배지에는 이름의 첫 글자를 쓴다
+      short: [...nameKo][0] ?? '?',
+      href: code === ALL_CHARACTERS ? '/dex' : `/dex/${code}`,
+      tint: TINTS[code] ?? TINTS[OTHER_CHARACTERS]!,
+    };
+  };
+
+  return [make(ALL_CHARACTERS), ...characterCodes().map(make)];
+}
+
+/** 이 굿즈가 "다른 친구들"에 속하는지. 주요 캐릭터가 하나도 안 붙은 경우다 */
+function isOther(item: CollectedItem): boolean {
+  return !item.parsed.characterCodes.some((code) => MAIN_CHARACTERS.includes(code));
 }
 
 /** 캐릭터로 거른다. 전체면 그대로 돌려준다 */
 export function filterByCharacter(items: CollectedItem[], code: string): CollectedItem[] {
   if (code === ALL_CHARACTERS) {
     return items;
+  }
+  if (code === OTHER_CHARACTERS) {
+    return items.filter(isOther);
   }
 
   return items.filter((item) => item.parsed.characterCodes.includes(code));
@@ -96,33 +137,15 @@ export function countByCharacter(items: CollectedItem[]): Map<string, number> {
     for (const code of item.parsed.characterCodes) {
       counts.set(code, (counts.get(code) ?? 0) + 1);
     }
+    if (isOther(item)) {
+      counts.set(OTHER_CHARACTERS, (counts.get(OTHER_CHARACTERS) ?? 0) + 1);
+    }
   }
 
   return counts;
 }
 
-/** 화면에 띄울 종류 필터 후보. 실제로 쓰인 종류만 건수 많은 순으로 */
-export function categoryOptions(items: CollectedItem[]): { code: string; count: number }[] {
-  const counts = new Map<string, number>();
-
-  for (const item of items) {
-    for (const code of item.parsed.categoryCodes) {
-      counts.set(code, (counts.get(code) ?? 0) + 1);
-    }
-  }
-
-  return [...counts.entries()]
-    .map(([code, count]) => ({ code, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-/**
- * 검색용 문자열.
- * 한국어명·일본어명·원본 태그를 합쳐서 "ちいかわ" 로도 "치이카와" 로도 찾히게 한다.
- */
-export function searchHaystack(item: CollectedItem): string {
-  return [item.nameKo, item.nameJa, item.handle, ...item.tagsRaw]
-    .filter((value): value is string => typeof value === 'string')
-    .join(' ')
-    .toLowerCase();
+/** "다른 친구들" 안에 실제로 들어 있는 캐릭터 이름들. 화면 설명문에 쓴다 */
+export function minorCharacterNames(): string[] {
+  return minorCharacterCodes().map((code) => NAME_BY_CODE.get(code) ?? code);
 }

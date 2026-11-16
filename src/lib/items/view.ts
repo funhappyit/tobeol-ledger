@@ -11,15 +11,18 @@
 
 import type { CollectedItem } from '../collect/types';
 
+/**
+ * 여기 있는 항목은 전부 화면이 실제로 쓰는 것이다.
+ * 캐릭터 코드나 원본 주소처럼 서버에서만 필요한 값은 일부러 뺐다.
+ * 1만 건이 넘다 보니 한 건에 수십 바이트만 더해도 전체로는 메가 단위가 된다.
+ */
 export interface DexItem {
   handle: string;
   nameKo: string | null;
   nameJa: string | null;
   listPriceJpy: number | null;
   imageUrl: string | null;
-  sourceUrl: string;
   releasedOn: string | null;
-  characterCodes: string[];
   categoryCodes: string[];
   /** 1회계당 구매 수량 제한. 공식몰에서 수량을 묶어 파는 굿즈 표시용 */
   purchaseLimit: number | null;
@@ -34,9 +37,7 @@ export function toDexItem(item: CollectedItem): DexItem {
     nameJa: item.nameJa,
     listPriceJpy: item.listPriceJpy,
     imageUrl: item.imageUrl,
-    sourceUrl: item.sourceUrl,
     releasedOn: item.parsed.releasedOn,
-    characterCodes: item.parsed.characterCodes,
     categoryCodes: item.parsed.categoryCodes,
     purchaseLimit: item.parsed.purchaseLimit,
     search: [item.nameKo, item.nameJa, item.handle, ...item.tagsRaw]
