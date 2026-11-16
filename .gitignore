@@ -44,8 +44,11 @@ next-env.d.ts
 !.env.example
 
 # 수집 스크립트 산출물
-/data/*.json
-/data/*.jsonl
+/data/*
+!/data/.gitkeep
 
 # 계획·요구사항 문서 (로컬 보관)
 /docs/
+
+# IDE
+/.idea/
