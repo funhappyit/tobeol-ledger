@@ -13,7 +13,7 @@
  *   npm run collect -- --locales ko               # 한국어만 (요청 수 절반)
  */
 
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -37,8 +37,17 @@ const { values } = parseArgs({
     resume: { type: 'boolean', default: false },
     // 통화가 JPY 가 아니어도 그대로 수집한다. 조사 목적이 아니면 쓰지 말 것
     'allow-any-currency': { type: 'boolean', default: false },
+    // 캐시를 무시하고 sitemap 에서 상품 목록을 다시 받는다
+    'refresh-handles': { type: 'boolean', default: false },
   },
 });
+
+/**
+ * 상품 목록 캐시 경로.
+ * sitemap 11개를 모두 받으면 10MB 가 넘는다. 목록은 자주 바뀌지 않으므로
+ * 한 번 받아 두고 재사용하고, 새 상품을 반영할 때만 --refresh-handles 로 다시 받는다.
+ */
+const HANDLE_CACHE_PATH = 'data/handles.json';
 
 const origin = values.origin ?? process.env.CHIIKAWA_MARKET_ORIGIN ?? 'https://chiikawamarket.jp';
 const outPath = values.out as string;
@@ -76,20 +85,51 @@ async function readCollectedHandles(path: string): Promise<Set<string>> {
   return collected;
 }
 
+/** 상품 목록 캐시를 읽는다. 없거나 깨져 있으면 null */
+async function readHandleCache(): Promise<string[] | null> {
+  if (!existsSync(HANDLE_CACHE_PATH)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(await readFile(HANDLE_CACHE_PATH, 'utf8')) as unknown;
+    if (Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string')) {
+      return parsed as string[];
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+async function writeHandleCache(handles: string[]): Promise<void> {
+  await mkdir(dirname(HANDLE_CACHE_PATH), { recursive: true });
+  await writeFile(HANDLE_CACHE_PATH, JSON.stringify(handles), 'utf8');
+}
+
 async function main(): Promise<void> {
   console.log(`수집 대상: ${origin}`);
   console.log(`로케일: ${locales.join(', ')} / 요청 간격: ${intervalMs}ms`);
 
   const throttle = createThrottle(intervalMs);
 
-  console.log('sitemap 에서 상품 목록을 받는 중...');
-  let handles = await fetchAllProductHandles(
-    origin,
-    (done, total) => process.stdout.write(`\r  sitemap ${done}/${total}`),
-    throttle,
-  );
-  process.stdout.write('\n');
-  console.log(`상품 ${handles.length.toLocaleString()}건 확인`);
+  let handles = values['refresh-handles'] ? null : await readHandleCache();
+
+  if (handles) {
+    console.log(`상품 목록 캐시 사용: ${handles.length.toLocaleString()}건 (${HANDLE_CACHE_PATH})`);
+    console.log('새 상품을 반영하려면 --refresh-handles 를 붙이세요');
+  } else {
+    console.log('sitemap 에서 상품 목록을 받는 중...');
+    handles = await fetchAllProductHandles(
+      origin,
+      (done, total) => process.stdout.write(`\r  sitemap ${done}/${total}`),
+      throttle,
+    );
+    process.stdout.write('\n');
+    console.log(`상품 ${handles.length.toLocaleString()}건 확인`);
+    await writeHandleCache(handles);
+  }
 
   if (handles.length === 0) {
     console.log('수집할 상품이 없습니다.');
