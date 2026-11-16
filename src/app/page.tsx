@@ -149,8 +149,9 @@ function EmptyState() {
       <p className="mt-2 text-sm text-muted">
         아래 명령으로 공식몰에서 굿즈를 받아오면 이 자리에 채워집니다.
       </p>
+      {/* PowerShell 에서는 npm run 뒤의 -- 인자가 전달되지 않아 npx 로 직접 실행한다 */}
       <pre className="mt-4 inline-block rounded-lg bg-background px-4 py-2 text-left text-sm">
-        npm run collect -- --limit 50
+        npx tsx scripts/collect-items.ts --limit 50
       </pre>
     </div>
   );
