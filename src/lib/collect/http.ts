@@ -31,13 +31,24 @@ export interface FetchOptions {
 /**
  * 사용할 curl 실행 파일.
  *
- * 스토어의 봇 차단이 TLS 지문을 보기 때문에 같은 요청이라도 클라이언트 빌드에 따라 결과가 갈린다.
- * 실제로 Windows 기본 curl 8.22.0 은 429, Git 번들 curl 8.7.1 은 200 이었다.
- * 환경에 따라 달라지므로 PATH 의 curl 을 기본으로 쓰되 COLLECT_CURL_PATH 로 바꿀 수 있게 둔다.
+ * 같은 요청인데 PATH 에서 어떤 curl 이 잡히느냐에 따라 결과가 갈린다.
+ * 확인된 사실:
+ *   - Git 번들 curl 8.7.1  → /meta.json, /collections/all/products.json 모두 200
+ *   - Windows 기본 curl    → /meta.json 은 200 인데 카탈로그는 429
+ * User-Agent 는 원인이 아니다. 같은 curl 이면 기본 UA 든 우리 UA 든 똑같이 200 이다.
  *
- * 예) COLLECT_CURL_PATH="C:\\Program Files\\Git\\mingw64\\bin\\curl.exe"
+ * Windows 에서 PowerShell 로 실행하면 System32 의 curl 이 먼저 잡히고,
+ * Git Bash 로 실행하면 mingw64 의 curl 이 먼저 잡힌다. 그래서 실행 셸에 따라 결과가 달라진다.
+ * PATH 의 curl 을 기본으로 쓰되 필요하면 COLLECT_CURL_PATH 로 지정할 수 있게 둔다.
  */
 const CURL_PATH = process.env.COLLECT_CURL_PATH ?? 'curl';
+
+/** 실제로 쓰이는 curl 의 버전 문자열. 확인 전이거나 curl 이 없으면 null */
+let curlVersion: string | null = null;
+
+export function getCurlVersion(): string | null {
+  return curlVersion;
+}
 
 const USER_AGENT = 'tobeol-ledger/0.1 (personal goods tracker; contact via repository issues)';
 const ACCEPT = 'application/json, text/xml, */*';
@@ -111,7 +122,8 @@ let curlUsable: boolean | null = null;
 async function send(url: string, timeoutMs: number): Promise<HttpResult> {
   if (curlUsable === null) {
     try {
-      await execFileAsync(CURL_PATH, ['--version'], { timeout: 10000 });
+      const { stdout } = await execFileAsync(CURL_PATH, ['--version'], { timeout: 10000 });
+      curlVersion = stdout.split('\n')[0]?.trim() ?? null;
       curlUsable = true;
     } catch {
       curlUsable = false;

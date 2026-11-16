@@ -20,7 +20,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { createThrottle } from '../src/lib/collect/http';
+import { createThrottle, getCurlVersion } from '../src/lib/collect/http';
 import { fetchPresentmentCurrency, fetchShopCurrency } from '../src/lib/collect/currency';
 import { MAX_PAGE_SIZE, fetchCatalogPage, indexById } from '../src/lib/collect/catalog';
 import { normalizeProduct } from '../src/lib/collect/product';
@@ -56,6 +56,28 @@ const pageSize = Math.min(Number(values['page-size'] ?? MAX_PAGE_SIZE), MAX_PAGE
 
 /** 기준 로케일. 이 로케일에 없는 상품은 수집하지 않는다 */
 const primaryLocale = locales[0] ?? 'ko';
+
+/**
+ * 카탈로그 조회가 429 로 막혔을 때의 안내.
+ *
+ * `/meta.json` 은 통과하는데 카탈로그만 429 로 막히는 경우가 있다.
+ * 지금까지 확인한 바로는 PATH 에서 잡히는 curl 빌드에 따라 갈렸고,
+ * Windows 에서 PowerShell 로 돌리면 System32 curl 이, Git Bash 로 돌리면 mingw64 curl 이 잡힌다.
+ * 원인을 짐작하기 어려운 에러라 발생 시점에 지금 쓰고 있는 curl 을 같이 찍어 준다.
+ */
+function explain429(): void {
+  console.error(
+    [
+      '',
+      '카탈로그 조회가 429(요청 과다)로 막혔습니다.',
+      `현재 전송에 쓰는 curl: ${getCurlVersion() ?? '확인 실패(Node fetch 사용 중)'}`,
+      '',
+      '통화 확인(/meta.json)은 통과했는데 카탈로그만 막힌다면 curl 빌드 차이일 수 있습니다.',
+      'Git Bash 에서 같은 명령을 실행해 보세요(PATH 의 curl 이 달라집니다).',
+      '요청 간격을 늘리는 것도(--interval 3000) 함께 시도해 볼 만합니다.',
+    ].join('\n'),
+  );
+}
 
 async function main(): Promise<void> {
   console.log(`수집 대상: ${origin}`);
@@ -163,5 +185,11 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   console.error(error);
+
+  // 429 는 원인이 바로 와닿지 않는 에러라 따로 안내를 붙인다
+  if (error instanceof Error && error.message.includes('HTTP 429')) {
+    explain429();
+  }
+
   process.exit(1);
 });
