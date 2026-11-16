@@ -19,7 +19,7 @@ import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { createThrottle } from '../src/lib/collect/http';
-import { fetchActiveCurrency } from '../src/lib/collect/currency';
+import { fetchPresentmentCurrency, fetchShopCurrency } from '../src/lib/collect/currency';
 import { fetchAllProductHandles } from '../src/lib/collect/sitemap';
 import { fetchProduct, normalizeProduct } from '../src/lib/collect/product';
 import type { CollectedItem } from '../src/lib/collect/types';
@@ -39,6 +39,8 @@ const { values } = parseArgs({
     'allow-any-currency': { type: 'boolean', default: false },
     // 캐시를 무시하고 sitemap 에서 상품 목록을 다시 받는다
     'refresh-handles': { type: 'boolean', default: false },
+    // 표시 통화까지 확인한다. 상품 페이지(700KB 이상)를 받아야 해서 느리다
+    'verify-presentment': { type: 'boolean', default: false },
   },
 });
 
@@ -137,15 +139,23 @@ async function main(): Promise<void> {
   }
 
   // 상품 JSON 에는 통화 표시가 없고, 같은 URL 이라도 요청한 지역에 따라
-  // 엔화가 아닌 통화로 내려오는 경우가 있다. 시작 전에 활성 통화를 확인한다.
+  // 엔화가 아닌 통화로 내려오는 경우가 있다. 시작 전에 통화를 확인한다.
   await throttle();
-  const currency = await fetchActiveCurrency(origin, handles[0]);
-  console.log(`활성 통화: ${currency ?? '확인 실패'}`);
+  let currency = await fetchShopCurrency(origin);
+  console.log(`스토어 통화: ${currency ?? '확인 실패'}`);
+
+  if (values['verify-presentment']) {
+    await throttle();
+    const presentment = await fetchPresentmentCurrency(origin, handles[0]);
+    console.log(`표시 통화: ${presentment ?? '확인 실패'}`);
+    // 표시 통화를 확인했다면 그쪽이 실제 응답에 적용된 값이므로 우선한다
+    currency = presentment;
+  }
 
   if (currency !== REQUIRED_CURRENCY && !values['allow-any-currency']) {
     const reason =
       currency === null
-        ? '공식몰의 활성 통화를 확인하지 못했습니다(요청이 막혔거나 페이지 형식이 바뀌었을 수 있습니다).'
+        ? '공식몰의 통화를 확인하지 못했습니다(요청이 막혔거나 응답 형식이 바뀌었을 수 있습니다).'
         : `공식몰이 ${currency} 로 응답하고 있습니다.`;
 
     console.error(

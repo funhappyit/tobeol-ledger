@@ -1,5 +1,5 @@
 /**
- * 수집 시점의 활성 통화 확인
+ * 수집 시점의 통화 확인
  *
  * 공식몰은 Shopify Markets 를 쓰기 때문에 같은 URL 이라도 요청한 쪽의 지역에 따라
  * 가격을 다른 통화로 내려준다. 그런데 상품 JSON(`/products/{handle}.json`)에는
@@ -8,17 +8,20 @@
  * 실제로 같은 상품이 어떤 때는 1430(엔), 어떤 때는 14100(원)으로 내려온 것을 확인했다.
  * 정가(엔)는 플미 계산의 기준값이라 통화가 섞이면 결과 전체가 무의미해진다.
  *
- * 다행히 스토어프론트 HTML 에는 활성 통화가 박혀 있다:
- *   Shopify.currency = {"active":"JPY","rate":"1.0"};
+ * 확인 방법이 둘 있는데 비용 차이가 크다.
  *
- * 그래서 수집을 시작하기 전에 이 값을 읽어 JPY 인지 확인하고, 아니면 수집을 멈춘다.
+ * 1. `/meta.json` — 수백 바이트. 스토어 자체 통화(`"currency":"JPY"`)를 준다.
+ *    빠르고 안정적이라 매 수집마다 돌린다.
+ * 2. 상품 페이지 HTML 의 `Shopify.currency = {"active":"JPY","rate":"1.0"}`
+ *    — 지금 이 요청에 실제로 적용된 표시 통화라 더 정확하지만 페이지가 700KB 가 넘는다.
+ *    매번 받기에는 너무 무거워서(실제로 타임아웃으로 수집이 막혔다) 선택 옵션으로 둔다.
  */
 
 import { fetchWithRetry } from './http';
 
 const RE_SHOPIFY_CURRENCY = /Shopify\.currency\s*=\s*(\{[^}]*\})/;
 
-/** 스토어프론트 HTML 에서 활성 통화 코드를 뽑는다. 못 찾으면 null */
+/** 스토어프론트 HTML 에서 표시 통화 코드를 뽑는다. 못 찾으면 null */
 export function parseActiveCurrency(html: string): string | null {
   const match = RE_SHOPIFY_CURRENCY.exec(html);
   if (!match) {
@@ -37,15 +40,52 @@ export function parseActiveCurrency(html: string): string | null {
   return null;
 }
 
+/** `/meta.json` 응답에서 스토어 통화를 뽑는다 */
+export function parseShopCurrency(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null) {
+    return null;
+  }
+
+  const currency = (body as { currency?: unknown }).currency;
+  if (typeof currency === 'string' && /^[A-Z]{3}$/.test(currency)) {
+    return currency;
+  }
+
+  return null;
+}
+
 /**
- * 지금 이 환경에서 공식몰이 어떤 통화로 응답하는지 확인한다.
- * 상품 1건의 페이지만 받으면 되므로 수집 1회당 한 번만 호출한다.
+ * 스토어 자체 통화. `/meta.json` 은 수백 바이트라 매 수집마다 불러도 부담이 없다.
+ * 확인에 실패하면 null 을 돌려주고, 호출하는 쪽에서 수집을 멈추면 된다.
  */
-export async function fetchActiveCurrency(origin: string, probeHandle: string): Promise<string | null> {
-  // 확인에 실패하면 null 을 돌려준다. 호출하는 쪽에서 "통화를 확인하지 못했다"로 다루고
-  // 수집을 멈추면 되므로, 여기서 예외를 던져 올릴 이유가 없다.
+export async function fetchShopCurrency(origin: string): Promise<string | null> {
   try {
-    const response = await fetchWithRetry(`${origin}/products/${encodeURIComponent(probeHandle)}`);
+    const response = await fetchWithRetry(`${origin}/meta.json`, { retries: 2 });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return parseShopCurrency(await response.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 지금 이 요청에 적용된 표시 통화. 상품 페이지 HTML 을 통째로 받아야 해서 느리다.
+ * 지역에 따른 통화 전환까지 확인하고 싶을 때만 쓴다.
+ */
+export async function fetchPresentmentCurrency(
+  origin: string,
+  probeHandle: string,
+): Promise<string | null> {
+  try {
+    // 700KB 가 넘는 페이지라 기본 타임아웃(20초)으로는 모자란다
+    const response = await fetchWithRetry(`${origin}/products/${encodeURIComponent(probeHandle)}`, {
+      retries: 2,
+      timeoutMs: 90000,
+    });
 
     if (!response.ok) {
       return null;

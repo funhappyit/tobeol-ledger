@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseActiveCurrency } from './currency';
+import { parseActiveCurrency, parseShopCurrency } from './currency';
 
 describe('parseActiveCurrency', () => {
   it('공식몰 페이지의 통화 선언을 읽는다', () => {
@@ -37,5 +37,18 @@ describe('parseActiveCurrency', () => {
 
   it('JSON 이 깨져 있으면 null 이다', () => {
     assert.equal(parseActiveCurrency('Shopify.currency = {active:JPY};'), null);
+  });
+});
+
+describe('parseShopCurrency', () => {
+  it('meta.json 의 통화를 읽는다', () => {
+    assert.equal(parseShopCurrency({ country: 'JP', currency: 'JPY' }), 'JPY');
+  });
+
+  it('통화 필드가 없거나 형식이 다르면 null 이다', () => {
+    assert.equal(parseShopCurrency({ country: 'JP' }), null);
+    assert.equal(parseShopCurrency({ currency: 'yen' }), null);
+    assert.equal(parseShopCurrency(null), null);
+    assert.equal(parseShopCurrency('JPY'), null);
   });
 });
