@@ -68,16 +68,5 @@ export async function getItems(): Promise<ItemListResult> {
   return { items, currencies: [...currencies] };
 }
 
-/**
- * Shopify CDN 이미지에 크기 파라미터를 붙인다.
- * 이미지는 우리가 저장하지 않고 원본 CDN 을 그대로 참조하며,
- * 리사이즈도 Shopify 가 해 주는 것을 쓴다.
- */
-export function withImageWidth(url: string | null, width: number): string | null {
-  if (!url) {
-    return null;
-  }
-
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}width=${width}`;
-}
+// 이미지 주소 가공은 클라이언트에서도 쓰므로 image.ts 로 옮겼다.
+// 이 파일은 node:fs 를 import 하기 때문에 클라이언트에서 import 하면 빌드가 깨진다.
