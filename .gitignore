@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 환경변수 예시 파일은 커밋 허용
+!.env.example
+
+# 수집 스크립트 산출물
+/data/*.json
+/data/*.jsonl
+
+# 계획·요구사항 문서 (로컬 보관)
+/docs/

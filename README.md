@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 토벌 장부 (tobeol-ledger)
 
-## Getting Started
+치이카와(먼작귀) 굿즈 **토벌 기록과 지출·플미 분석** 서비스.
 
-First, run the development server:
+사고 싶은 굿즈를 모아두고, 손에 넣은 굿즈의 실제 지출을 기록하면
+**정가 대비 얼마나 비싸게 샀는지(플미)** 를 집계해서 보여줍니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 무엇이 다른가
+
+기존 도감 서비스에는 위시리스트와 수집 체크는 있지만 **지출과 프리미엄 분석이 없습니다.**
+이 프로젝트의 중심은 거기입니다.
+
+- 정가로 산 것과 플미를 주고 산 것을 구분
+- 플미액·플미율 계산 (구매 시점 정가·환율 스냅샷 기준)
+- 플미로 더 쓴 총액, 가장 비싸게 산 굿즈, 캐릭터별·종류별 지출 분포
+
+## 플미 계산 방식
+
+구매 기록에는 **그 시점의 정가(엔)와 환율을 복사해 저장**합니다.
+정가가 개정되거나 환율이 움직여도 과거 기록의 플미율이 흔들리지 않아야 하기 때문입니다.
+
+```
+정가_원화환산 = 정가(엔) 스냅샷 × 환율 스냅샷 × 수량
+상품_순지출   = 실지출(원)                      (배송비·수수료 제외)
+총지출        = 실지출 + 배송비 + 수수료
+플미액        = 상품_순지출 - 정가_원화환산
+플미율(%)     = 플미액 / 정가_원화환산 × 100
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+배송비와 대행수수료는 플미와 **분리**해서 보관합니다.
+배대지 수수료를 플미에 합치면 실제 프리미엄이 과장되기 때문에,
+통계는 "순 상품가 기준"과 "총지출 기준" 두 가지로 보여줍니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+환율은 ECB 기준 자동 조회값이라 실제 카드·대행 결제 환율과 차이가 납니다.
+자동으로 채우되 **사용자가 수정할 수 있고**, 수정 여부를 따로 기록합니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 기술 스택
 
-## Learn More
+| 영역 | 사용 |
+| --- | --- |
+| 프레임워크 | Next.js 16 (App Router) + React 19 |
+| 스타일 | Tailwind CSS v4 |
+| 백엔드 | Supabase (Postgres + Auth + RLS) |
+| 배포 | Vercel |
+| 환율 | frankfurter.app (ECB 기준, 과거 일자 조회) |
 
-To learn more about Next.js, take a look at the following resources:
+## 로컬 실행
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+cp .env.example .env.local   # 값 채우기
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`.env.local` 에 넣을 값은 `.env.example` 의 주석을 참고하세요.
+`SUPABASE_SERVICE_ROLE_KEY` 는 **서버 전용**이며 절대 커밋하지 않습니다.
 
-## Deploy on Vercel
+## 데이터 출처
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+굿즈 이름·정가·발매일 등 상품 정보는 공식 온라인 스토어의 공개된 상품 데이터를 참고합니다.
+상품 이미지는 자체 저장하지 않고 원본 CDN을 참조합니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 고지
+
+이 프로젝트는 원작자 및 공식 판매처와 **아무 관련이 없는 비공식 개인 프로젝트**입니다.
+모든 캐릭터·이미지·디자인의 저작권은 원작자 ナガノ(Nagano) 및 정식 라이선시에게 있습니다.
+권리자의 요청이 있으면 즉시 해당 내용을 삭제합니다.
