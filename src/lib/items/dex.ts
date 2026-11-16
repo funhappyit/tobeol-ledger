@@ -5,8 +5,8 @@
  * 캐릭터를 경로로 둔 이유는 "치이카와 도감" 같은 단위가 공유·북마크의 기본 단위이기 때문이다.
  */
 
-import type { CollectedItem } from '@/lib/collect/types';
-import { CHARACTER_TAGS } from '@/lib/collect/vocab';
+import type { CollectedItem } from '../collect/types';
+import { CHARACTER_TAGS } from '../collect/vocab';
 
 /** 전체 탭을 나타내는 코드. 캐릭터 코드와 겹치지 않는 값이어야 한다 */
 export const ALL_CHARACTERS = 'all';

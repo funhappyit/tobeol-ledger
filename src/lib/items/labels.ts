@@ -5,7 +5,7 @@
  * 화면은 코드만 들고 있으므로 반대 방향 표를 만들어 둔다.
  */
 
-import { CATEGORY_TAGS, CHARACTER_TAGS } from '@/lib/collect/vocab';
+import { CATEGORY_TAGS, CHARACTER_TAGS } from '../collect/vocab';
 
 function invert(source: Record<string, { code: string; nameKo: string }>): Map<string, string> {
   const result = new Map<string, string>();

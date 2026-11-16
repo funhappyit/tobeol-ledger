@@ -38,10 +38,11 @@
 
 | 영역 | 사용 |
 | --- | --- |
-| 프레임워크 | Next.js 16 (App Router) + React 19 |
+| 프레임워크 | Nuxt 4 (Vue 3) |
 | 스타일 | Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + RLS) |
 | 배포 | Vercel |
+| 수집 | TypeScript 스크립트 (tsx + curl) |
 | 환율 | frankfurter.app (ECB 기준, 과거 일자 조회) |
 
 ## 로컬 실행

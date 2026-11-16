@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * 한글 본문 폰트(Pretendard)는 layout.tsx 의 <link> 로 불러온다.
+ * 한글 본문 폰트(Pretendard)는 nuxt.config.ts 의 app.head 에서 <link> 로 불러온다.
  * Tailwind v4 가 자신의 @import 를 인라인으로 펼치기 때문에
  * 여기에 @import 를 두면 규칙 뒤로 밀려 "@import rules must precede all rules" 로 빌드가 깨진다.
  */
@@ -45,7 +45,12 @@
   }
 }
 
+html {
+  height: 100%;
+}
+
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);

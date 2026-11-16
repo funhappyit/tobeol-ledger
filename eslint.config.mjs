@@ -1,18 +1,6 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+// Nuxt 가 프로젝트 구조에 맞춰 만들어 주는 설정을 그대로 쓴다 (.nuxt/eslint.config.mjs)
+import withNuxt from './.nuxt/eslint.config.mjs';
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
-
-export default eslintConfig;
+export default withNuxt({
+  ignores: ['data/**', 'supabase/**'],
+});

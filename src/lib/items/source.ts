@@ -9,7 +9,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { CollectedItem } from '@/lib/collect/types';
+import type { CollectedItem } from '../collect/types';
 
 const DATA_PATH = join(process.cwd(), 'data', 'items.jsonl');
 
