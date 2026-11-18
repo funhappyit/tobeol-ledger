@@ -58,7 +58,7 @@ const subtitle = computed(() => {
 <template>
   <main class="mx-auto w-full max-w-7xl px-3 pt-4 pb-10 sm:px-6">
     <!-- 탭 바. 좁은 화면에서는 가로로 넘긴다 -->
-    <nav class="no-scrollbar -mb-px flex gap-1.5 overflow-x-auto pb-0">
+    <ChipScroller class="-mb-px" on-background>
       <NuxtLink
         v-for="tab in tabs"
         :key="tab.code"
@@ -77,7 +77,7 @@ const subtitle = computed(() => {
           <span class="text-xs text-muted">{{ (data?.counts[tab.code] ?? 0).toLocaleString() }}</span>
         </span>
       </NuxtLink>
-    </nav>
+    </ChipScroller>
 
     <section class="rounded-2xl rounded-tl-none border border-border-soft bg-surface p-4 sm:p-6">
       <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

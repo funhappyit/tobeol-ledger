@@ -102,3 +102,37 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * 칩 줄의 좌우 이동 버튼
+ *
+ * 칩이 버튼 밑으로 자연스럽게 지나가 보이도록 버튼 바깥쪽에 배경색 그라데이션을 깐다.
+ * 그냥 동그라미만 띄우면 칩이 버튼에 잘린 것처럼 보인다.
+ */
+.chip-arrow {
+  /* 버튼 주변을 가릴 색. 칩 줄이 어떤 배경 위에 있느냐에 따라 달라진다 */
+  --halo: var(--surface);
+  position: absolute;
+  top: 50%;
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  translate: 0 -50%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--halo);
+  color: var(--muted);
+  box-shadow: 0 0 0 6px var(--halo);
+  transition: color 0.15s;
+}
+
+.chip-arrow:hover {
+  color: var(--foreground);
+}
+
+/* 캐릭터 탭 줄은 패널이 아니라 페이지 배경 위에 있다 */
+.chip-arrow-on-background {
+  --halo: var(--background);
+}

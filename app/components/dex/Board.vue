@@ -94,43 +94,13 @@ function pickCategory(code: string | null): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <label class="relative w-full sm:max-w-xs">
-        <span class="sr-only">굿즈 검색</span>
-        <input
-          v-model="query"
-          type="search"
-          placeholder="이름, 일본어, 태그로 찾기"
-          class="w-full rounded-full border border-border-soft bg-background px-4 py-2.5 text-sm outline-none focus:border-accent"
-        >
-      </label>
-
-      <div class="no-scrollbar flex gap-1.5 overflow-x-auto">
-        <button
-          v-for="filter in OWNED_FILTERS"
-          :key="filter.value"
-          type="button"
-          :aria-pressed="ownedFilter === filter.value"
-          class="shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition-colors"
-          :class="
-            ownedFilter === filter.value
-              ? 'border-accent bg-accent text-white'
-              : 'border-border-soft text-muted hover:text-foreground'
-          "
-          @click="ownedFilter = filter.value"
-        >
-          {{ filter.label }}
-        </button>
-      </div>
-    </div>
-
-    <!-- 종류 칩. 종류가 많아 좁은 화면에서는 가로로 넘긴다 -->
-    <div v-if="categories.length > 0" class="no-scrollbar flex gap-1.5 overflow-x-auto">
+  <div class="flex flex-col gap-3">
+    <!-- 종류. 열일곱 가지라 한 줄에 안 들어가서 좌우로 넘긴다 -->
+    <ChipScroller v-if="categories.length > 0">
       <button
         type="button"
         :aria-pressed="category === null"
-        class="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors"
+        class="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
         :class="
           category === null
             ? 'bg-foreground text-surface'
@@ -145,7 +115,7 @@ function pickCategory(code: string | null): void {
         :key="entry.code"
         type="button"
         :aria-pressed="category === entry.code"
-        class="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors"
+        class="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
         :class="
           category === entry.code
             ? 'bg-foreground text-surface'
@@ -156,6 +126,36 @@ function pickCategory(code: string | null): void {
         {{ categoryName(entry.code) }}
         <span class="ml-0.5 opacity-70">{{ entry.count.toLocaleString() }}</span>
       </button>
+    </ChipScroller>
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <label class="relative w-full sm:max-w-xs">
+        <span class="sr-only">굿즈 검색</span>
+        <input
+          v-model="query"
+          type="search"
+          placeholder="이름, 일본어, 태그로 찾기"
+          class="w-full rounded-full border border-border-soft bg-background px-4 py-2 text-sm outline-none focus:border-accent"
+        >
+      </label>
+
+      <ChipScroller class="min-w-0 flex-1">
+        <button
+          v-for="filter in OWNED_FILTERS"
+          :key="filter.value"
+          type="button"
+          :aria-pressed="ownedFilter === filter.value"
+          class="shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors"
+          :class="
+            ownedFilter === filter.value
+              ? 'border-accent bg-accent text-white'
+              : 'border-border-soft text-muted hover:text-foreground'
+          "
+          @click="ownedFilter = filter.value"
+        >
+          {{ filter.label }}
+        </button>
+      </ChipScroller>
     </div>
 
     <p
