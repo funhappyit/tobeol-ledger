@@ -166,6 +166,34 @@ function pickCategory(code: string | null): void {
     </p>
 
     <template v-else>
+      <!-- 아이콘 두 개가 각각 무엇인지 글로 밝혀 둔다. 모양만으로는 구분되지 않는다 -->
+      <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+        <span class="inline-flex items-center gap-1.5">
+          <span
+            class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-accent bg-accent text-white"
+          >
+            <svg viewBox="0 0 20 20" class="h-3 w-3" fill="none" aria-hidden="true">
+              <path
+                d="M5 10.5l3.5 3.5L15 7"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          체크 = 토벌 완료(손에 넣은 것)
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" class="h-4 w-4 text-premium" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 20.5l-1.4-1.3C5.8 15 3 12.4 3 9.2 3 6.7 5 4.8 7.5 4.8c1.4 0 2.8.7 3.6 1.8.8-1.1 2.2-1.8 3.6-1.8C17.2 4.8 19 6.7 19 9.2c0 3.2-2.8 5.8-7.6 10z"
+            />
+          </svg>
+          하트 = 토벌 리스트(사고 싶은 것)
+        </span>
+      </p>
+
       <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         <DexItemCard
           v-for="item in rendered"

@@ -59,15 +59,20 @@ const released = computed(() => {
         이미지 없음
       </div>
 
+      <!--
+        토벌 완료는 이 앱의 주 동작이다. 예전에는 hover 했을 때만 보이게 해 뒀는데,
+        휴대폰에는 hover 가 없어서 아예 누를 수 없었다. 항상 보이게 둔다.
+      -->
       <button
         type="button"
         :aria-pressed="showOwned"
         :aria-label="showOwned ? `${name} 토벌 완료 해제` : `${name} 토벌 완료로 표시`"
-        class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border transition-colors"
+        :title="showOwned ? '토벌 완료 해제' : '토벌 완료로 표시'"
+        class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors"
         :class="
           showOwned
             ? 'border-accent bg-accent text-white'
-            : 'border-border-soft bg-white/90 text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+            : 'border-border-soft bg-white/90 text-muted hover:border-accent hover:text-accent'
         "
         @click="emit('toggle', 'owned', item.handle)"
       >
@@ -102,6 +107,7 @@ const released = computed(() => {
           type="button"
           :aria-pressed="showWish"
           :aria-label="showWish ? `${name} 토벌 리스트에서 제외` : `${name} 토벌 리스트에 추가`"
+          :title="showWish ? '토벌 리스트에서 제외' : '토벌 리스트에 추가(사고 싶은 것)'"
           class="transition-colors"
           :class="showWish ? 'text-premium' : 'text-border-soft hover:text-muted'"
           @click="emit('toggle', 'wish', item.handle)"
