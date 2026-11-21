@@ -9,8 +9,19 @@ import tailwindcss from '@tailwindcss/vite';
 const libPath = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint'],
+  modules: ['@nuxt/eslint', '@nuxtjs/supabase'],
   compatibilityDate: '2026-11-16',
+
+  supabase: {
+    // 도감·홈은 로그인 없이 보는 화면이다.
+    // 이 값을 켜 두면(기본값 true) 모든 페이지가 /login 으로 튕긴다.
+    redirect: false,
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: [],
+    },
+  },
   devtools: { enabled: true },
 
   alias: { '@lib': libPath },

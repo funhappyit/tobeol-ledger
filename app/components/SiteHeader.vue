@@ -40,6 +40,8 @@ function isActive(to: string): boolean {
           {{ entry.label }}
         </NuxtLink>
       </nav>
+
+      <UserMenu />
     </div>
   </header>
 </template>
