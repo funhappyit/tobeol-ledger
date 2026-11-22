@@ -3,17 +3,19 @@
  * 로그인 콜백
  *
  * 매직링크나 OAuth 를 거쳐 돌아오는 자리다.
- * 토큰 교환 자체는 supabase 클라이언트가 주소에 담겨 온 값을 보고 알아서 한다
- * (createBrowserClient 의 detectSessionInUrl). 그래서 여기서 직접 교환하지 않는다.
- * 두 번 교환하면 "code already used" 로 오히려 실패한다.
+ * 토큰 교환은 원래 supabase 클라이언트가 알아서 한다(detectSessionInUrl).
+ * 그런데 PKCE 방식에서는 로그인을 시작할 때 저장해 둔 검증값(code verifier)이 있어야만
+ * 교환을 시도한다. 검증값이 없으면 아무 일도 하지 않고 조용히 넘어가서,
+ * 주소에 ?code= 가 그대로 남은 채 화면이 멈춘다.
  *
- * 다만 실패했을 때 가만히 멈춰 있으면 안 된다.
- * 실패는 주소의 error 파라미터로 오거나, 아무 일도 일어나지 않는 형태로 온다.
- * 둘 다 화면에 드러내야 사용자가 다음에 무엇을 할지 알 수 있다.
+ * 그래서 세션이 없고 code 가 남아 있으면 직접 교환해 본다.
+ * 실패하면 이유가 오류 메시지로 돌아오므로 그것을 그대로 보여 준다.
+ * (자동 교환이 이미 성공한 경우에는 code 가 주소에서 지워지므로 여기까지 오지 않는다)
  */
 
 useHead({ title: '로그인 확인' });
 
+const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 const route = useRoute();
 const router = useRouter();
@@ -39,7 +41,7 @@ function readError(): string | null {
   return null;
 }
 
-onMounted(() => {
+onMounted(async () => {
   const error = readError();
   if (error) {
     failure.value = error;
@@ -52,6 +54,18 @@ onMounted(() => {
         '로그인 정보를 확인하지 못했습니다. 링크가 만료됐거나 이미 사용됐을 수 있고, 로그인을 시작한 브라우저와 다른 브라우저에서 링크를 열어도 이렇게 됩니다.';
     }
   }, TIMEOUT_MS);
+
+  // 자동 교환이 일어나지 않은 경우에만 직접 교환한다
+  const code = route.query.code;
+  if (typeof code !== 'string' || user.value) {
+    return;
+  }
+
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (exchangeError) {
+    failure.value = `${exchangeError.message} (code ${exchangeError.status ?? '?'})`;
+  }
 });
 
 onUnmounted(() => {
