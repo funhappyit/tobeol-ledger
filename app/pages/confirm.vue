@@ -26,19 +26,45 @@ const TIMEOUT_MS = 6000;
 const failure = ref<string | null>(null);
 let timer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Supabase 가 돌려주는 오류 코드를 사람이 읽을 말로 바꾼다.
+ * 원문은 영어이고, 무엇을 해야 하는지가 빠져 있어 그대로 보여 주면 막막하다.
+ */
+const ERROR_MESSAGES: Record<string, string> = {
+  otp_expired:
+    '로그인 링크가 만료됐거나 이미 사용됐습니다. 링크는 한 번만 쓸 수 있으니, 로그인 화면에서 새 링크를 받아 한 번만 눌러 주세요.',
+  access_denied:
+    '로그인이 거부됐습니다. 링크가 만료됐거나 이미 사용됐을 가능성이 큽니다. 새 링크를 받아 주세요.',
+  flow_state_not_found:
+    '로그인 요청과 링크가 짝이 맞지 않습니다. 로그인을 시작한 브라우저에서 가장 최근에 받은 링크를 열어 주세요.',
+};
+
 /** 오류는 쿼리로 올 때도 있고 해시(#)로 올 때도 있다 */
 function readError(): string | null {
-  const fromQuery = route.query.error_description ?? route.query.error;
-  if (typeof fromQuery === 'string' && fromQuery.length > 0) {
-    return fromQuery;
+  const hash = import.meta.client
+    ? new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    : new URLSearchParams();
+
+  const pick = (key: string): string | null => {
+    const value = route.query[key];
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+    return hash.get(key);
+  };
+
+  const code = pick('error_code');
+  if (code && ERROR_MESSAGES[code]) {
+    return ERROR_MESSAGES[code];
   }
 
-  if (import.meta.client) {
-    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    return hash.get('error_description') ?? hash.get('error');
+  const name = pick('error');
+  if (name && ERROR_MESSAGES[name]) {
+    return ERROR_MESSAGES[name];
   }
 
-  return null;
+  // 모르는 오류는 원문 그대로 보여 준다. 숨기면 알아낼 방법이 없다
+  return pick('error_description') ?? name;
 }
 
 onMounted(async () => {
