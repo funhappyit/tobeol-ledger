@@ -22,6 +22,12 @@ export default defineNuxtConfig({
       exclude: [],
     },
   },
+
+  routeRules: {
+    // 콜백은 주소에 담겨 온 토큰을 브라우저에서 읽어 처리한다. 서버에서 그릴 것이 없다.
+    // 모듈이 redirect 옵션을 켰을 때 넣어 주는 설정인데, 우리는 그 옵션을 꺼서 직접 넣는다.
+    '/confirm': { ssr: false },
+  },
   devtools: { enabled: true },
 
   alias: { '@lib': libPath },
