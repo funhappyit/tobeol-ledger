@@ -1,9 +1,13 @@
 # 토벌 장부 (tobeol-ledger)
 
+**[tobeol-ledger.vercel.app](https://tobeol-ledger.vercel.app)**
+
 치이카와(먼작귀) 굿즈 **토벌 기록과 지출·플미 분석** 서비스.
 
 사고 싶은 굿즈를 모아두고, 손에 넣은 굿즈의 실제 지출을 기록하면
 **정가 대비 얼마나 비싸게 샀는지(플미)** 를 집계해서 보여줍니다.
+
+굿즈는 두 스토어에서 자동으로 모읍니다. 지금 1만 8백여 건.
 
 ## 무엇이 다른가
 
@@ -34,6 +38,25 @@
 환율은 ECB 기준 자동 조회값이라 실제 카드·대행 결제 환율과 차이가 납니다.
 자동으로 채우되 **사용자가 수정할 수 있고**, 수정 여부를 따로 기록합니다.
 
+## 어떻게 돌아가는가
+
+```
+GitHub Actions (cron)  →  수집  →  Supabase 적재
+                                        ↓
+                        Vercel (Nuxt)  읽기 + ISR 5분 캐시
+```
+
+**수집을 Vercel Cron 으로 돌리지 않습니다.** 공식몰 수집이 2~3분, 포켓 수집이
+5~6분 걸리는데 Vercel 함수 한도는 Hobby 60초 / Pro 300초입니다. 그래서 수집은
+Actions 가 맡고 Vercel 은 읽기만 합니다.
+
+덕분에 스토어와 DB 에 가는 요청 수가 **방문자 수와 무관**해집니다.
+크론이 하루에 도는 횟수로 고정됩니다.
+
+**ISR 로 캐시하는 화면은 누구에게나 같은 화면뿐입니다**(`/`, `/dex`).
+캐시된 HTML 은 모든 방문자에게 그대로 나가므로, 개인 자료가 실리는 `/ledger` 는
+캐시하지 않고 머리글의 로그인 표시도 브라우저에서만 그립니다.
+
 ## 기술 스택
 
 | 영역 | 사용 |
@@ -41,7 +64,8 @@
 | 프레임워크 | Nuxt 4 (Vue 3) |
 | 스타일 | Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + RLS) |
-| 배포 | Vercel |
+| 배포 | Vercel (ISR) |
+| 자동 수집 | GitHub Actions (cron) |
 | 수집 | TypeScript 스크립트 (tsx + curl) |
 | 환율 | frankfurter.app (ECB 기준, 과거 일자 조회) |
 
@@ -53,33 +77,55 @@ cp .env.example .env.local   # 값 채우기
 npm run dev
 ```
 
-`.env.local` 에 넣을 값은 `.env.example` 의 주석을 참고하세요.
-`SUPABASE_SERVICE_ROLE_KEY` 는 **서버 전용**이며 절대 커밋하지 않습니다.
-
 굿즈를 어디서 읽을지 못박고 싶으면 `ITEMS_SOURCE` 를 씁니다.
+기본값은 DB 를 먼저 보고, 비어 있거나 응답하지 않으면 수집본 파일로 넘어갑니다.
 
 ```
 ITEMS_SOURCE=db      # DB 만. 실패해도 수집본 파일로 넘어가지 않음
 ITEMS_SOURCE=files   # 수집본 파일만. 수집 결과를 바로 확인할 때
 ```
 
-## 배포
+## 굿즈 수집
+
+평소에는 Actions 가 알아서 돕니다.
+
+| 대상 | 주기 |
+| --- | --- |
+| 공식몰 | 매일 03:00 KST |
+| 포켓 스토어 | 일요일 04:00 KST |
+
+주기를 나눈 이유는 무게가 달라서입니다. 공식몰은 상품 JSON 을 250건씩 받아 86회면
+끝나고, 포켓 스토어는 상품 페이지를 하나씩 읽어 260회가 듭니다.
+
+Actions 탭의 **Run workflow** 로 스토어를 골라 수동 실행할 수 있고, 직접 돌릴 수도 있습니다.
+
+```bash
+npx tsx scripts/collect-items.ts     # 공식몰
+npx tsx scripts/collect-pocket.ts    # 포켓 스토어
+npm run load                         # 수집본을 Supabase 에 적재
+```
+
+스토어마다 산출물을 따로 둡니다(`data/items.jsonl`, `data/items-pocket.jsonl`).
+한쪽 수집이 실패해도 다른 쪽 수집본이 남습니다.
+
+### 포켓 스토어를 따로 다루는 이유
+
+이 스토어는 태그도 한국어 상품명도 주지 않습니다. 대신 상품명이 규칙적입니다.
 
 ```
-GitHub Actions (cron)  →  수집  →  Supabase 적재
-                                        ↓
-                        Vercel (Nuxt)  읽기 + ISR 5분 캐시
+ちいかわぽけっと  ピクニック な マスコット （ちいかわ）
+└─ 시리즈 ────┘  └ 테마 ┘      └ 품목 ┘  └ 캐릭터 ┘
 ```
 
-수집을 Vercel Cron 으로 돌리지 않는 이유는 함수 시간 한도입니다.
-공식몰 수집이 2~3분, 포켓 수집이 5~6분 걸리는데 한도는 Hobby 60초 / Pro 300초입니다.
-그래서 수집은 Actions 가 맡고 Vercel 은 읽기만 합니다.
+그래서 캐릭터·종류·한국어 이름을 모두 **상품명에서** 뽑습니다.
+어휘(`src/lib/collect/vocab.ts`, `pocket-name.ts`)를 보강한 뒤에는 다시 받지 않고
+해석만 고칠 수 있습니다.
 
-ISR 로 캐시하는 화면은 **누구에게나 같은 화면**뿐입니다(`/`, `/dex`).
-캐시된 HTML 은 모든 방문자에게 그대로 나가므로, 개인 자료가 실리는 `/ledger` 는 캐시하지 않고
-머리글의 로그인 표시도 브라우저에서만 그립니다.
+```bash
+npx tsx scripts/collect-pocket.ts --reparse   # 요청 없이 분류·번역만 다시
+```
 
-### 환경변수를 어디에 두는가
+## 환경변수
 
 | 이름 | 로컬 | Vercel | GitHub Secrets |
 | --- | :-: | :-: | :-: |
@@ -89,34 +135,7 @@ ISR 로 캐시하는 화면은 **누구에게나 같은 화면**뿐입니다(`/`
 
 `service_role` 키는 RLS 를 통째로 우회합니다. 앱은 읽기만 하므로 publishable 키로 충분하고,
 이 키를 Vercel 에 두면 서버 코드가 실수로 집어 쓸 길이 생깁니다. 적재하는 쪽에만 둡니다.
-
-### 자동 수집
-
-`.github/workflows/collect.yml` 이 맡습니다.
-
-| 대상 | 주기 |
-| --- | --- |
-| 공식몰 | 매일 03:00 KST |
-| 포켓 스토어 | 일요일 04:00 KST |
-
-Actions 탭에서 **Run workflow** 로 스토어를 골라 수동 실행할 수도 있습니다.
-
-## 굿즈 수집
-
-```bash
-npx tsx scripts/collect-items.ts     # 공식몰 (상품 JSON 일괄 조회)
-npx tsx scripts/collect-pocket.ts    # 포켓 굿즈 스토어 (sitemap + 구조화 데이터)
-```
-
-스토어마다 산출물을 따로 둡니다(`data/items.jsonl`, `data/items-pocket.jsonl`).
-한쪽 수집이 실패해도 다른 쪽 수집본이 남고, 화면은 두 파일을 합쳐 읽습니다.
-
-포켓 스토어는 태그를 제공하지 않아 캐릭터·종류를 **상품명에서** 판정합니다.
-분류 어휘(`src/lib/collect/vocab.ts`)를 보강한 뒤에는 다시 받지 않고 해석만 고칠 수 있습니다.
-
-```bash
-npx tsx scripts/collect-pocket.ts --reparse   # 요청 없이 분류만 다시
-```
+`.env.local` 은 커밋하지 않습니다.
 
 ## 데이터 출처
 
