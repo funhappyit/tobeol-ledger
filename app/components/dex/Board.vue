@@ -244,6 +244,7 @@ function pickCategory(code: string | null): void {
       v-if="recording"
       :item="recording"
       :owned-handles="owned"
+      :wish-handles="wish"
       @close="recording = null"
       @saved="onSaved"
     />

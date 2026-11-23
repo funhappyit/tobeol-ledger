@@ -16,8 +16,10 @@ import type { Database } from '~/types/database.types';
 
 const props = defineProps<{
   item: DexItem;
-  /** 토벌 완료로 표시한 굿즈만 담을 수 있다 */
+  /** 토벌 완료로 표시한 굿즈 */
   ownedHandles: Set<string>;
+  /** 토벌 리스트(하트)에 담은 굿즈. 사두고 아직 체크하지 않은 경우를 위해 함께 고를 수 있게 한다 */
+  wishHandles: Set<string>;
 }>();
 const emit = defineEmits<{ close: []; saved: [] }>();
 
@@ -88,40 +90,63 @@ function onFxInput(): void {
 }
 
 // --- 굿즈 더 담기 ---
+//
+// 검색어를 쳐야만 후보가 뜨면, 무엇을 담을 수 있는지 알 수 없다.
+// 표시해 둔 굿즈를 처음부터 목록으로 보여 주고, 많을 때만 검색으로 좁힌다.
 
 const adding = ref(false);
 const searchTerm = ref('');
-const searchResults = ref<DexItem[]>([]);
-const searching = ref(false);
+const candidates = ref<DexItem[]>([]);
+const loadingCandidates = ref(false);
+const candidatesLoaded = ref(false);
 
-async function runSearch(): Promise<void> {
-  const term = searchTerm.value.trim();
-  if (term.length === 0) {
-    searchResults.value = [];
+async function loadCandidates(): Promise<void> {
+  if (candidatesLoaded.value) {
     return;
   }
 
-  searching.value = true;
+  const handles = [...new Set([...props.ownedHandles, ...props.wishHandles])];
+  if (handles.length === 0) {
+    candidatesLoaded.value = true;
+    return;
+  }
+
+  loadingCandidates.value = true;
   try {
-    const result = await $fetch<{ items: DexItem[] }>('/api/items/search', {
-      query: { q: term },
+    const result = await $fetch<{ items: DexItem[] }>('/api/items/by-handles', {
+      method: 'POST',
+      body: { handles },
     });
-    const already = new Set(lines.value.map((line) => line.item.handle));
-    // 토벌 완료로 표시한 것만, 이미 담은 것은 빼고
-    searchResults.value = result.items.filter(
-      (found) => props.ownedHandles.has(found.handle) && !already.has(found.handle),
-    );
+    candidates.value = result.items;
+    candidatesLoaded.value = true;
   } catch {
-    searchResults.value = [];
+    candidates.value = [];
   } finally {
-    searching.value = false;
+    loadingCandidates.value = false;
   }
 }
+
+function openPicker(): void {
+  adding.value = true;
+  void loadCandidates();
+}
+
+/** 이미 담은 것은 빼고, 검색어가 있으면 좁힌다 */
+const visibleCandidates = computed(() => {
+  const already = new Set(lines.value.map((line) => line.item.handle));
+  const term = searchTerm.value.trim().toLowerCase();
+
+  return candidates.value.filter((candidate) => {
+    if (already.has(candidate.handle)) {
+      return false;
+    }
+    return term.length === 0 || candidate.search.includes(term);
+  });
+});
 
 function addLine(item: DexItem): void {
   lines.value.push({ item, quantity: 1, price: null });
   searchTerm.value = '';
-  searchResults.value = [];
   adding.value = false;
 }
 
@@ -292,50 +317,57 @@ async function save(): Promise<void> {
           v-if="!adding"
           type="button"
           class="w-full rounded-xl border border-dashed border-border-soft py-2 text-sm text-muted transition-colors hover:border-accent hover:text-foreground"
-          @click="adding = true"
+          @click="openPicker"
         >
           + 같이 산 굿즈 추가
         </button>
 
         <div v-else class="rounded-xl border border-border-soft bg-background p-3">
-          <div class="flex gap-2">
-            <input
-              v-model="searchTerm"
-              type="search"
-              placeholder="이름으로 찾기"
-              class="min-w-0 flex-1 rounded-lg border border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
-              @keyup.enter="runSearch"
-            >
+          <div class="flex items-center gap-2">
+            <p class="flex-1 text-sm font-medium">체크해 둔 굿즈에서 고르기</p>
             <button
               type="button"
-              class="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white"
-              @click="runSearch"
-            >
-              찾기
-            </button>
-            <button
-              type="button"
-              class="shrink-0 rounded-lg border border-border-soft px-3 py-2 text-sm text-muted"
+              class="shrink-0 rounded-lg border border-border-soft px-3 py-1.5 text-xs text-muted"
               @click="adding = false"
             >
               닫기
             </button>
           </div>
 
-          <p v-if="searching" class="mt-2 text-xs text-muted">찾는 중...</p>
-          <p v-else-if="searchTerm && searchResults.length === 0" class="mt-2 text-xs text-muted">
-            토벌 완료로 표시한 굿즈 중에는 없습니다. 도감에서 먼저 체크해 주세요.
+          <input
+            v-model="searchTerm"
+            type="search"
+            placeholder="많으면 이름으로 좁히기"
+            class="mt-2 w-full rounded-lg border border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+          >
+
+          <p v-if="loadingCandidates" class="mt-2 text-xs text-muted">불러오는 중...</p>
+
+          <p v-else-if="visibleCandidates.length === 0" class="mt-2 text-xs text-muted">
+            <template v-if="searchTerm">검색 결과가 없습니다.</template>
+            <template v-else>
+              담을 굿즈가 없습니다. 도감에서 체크(✓)나 하트(♥)로 표시해 두면 여기에 나옵니다.
+            </template>
           </p>
 
-          <ul v-else class="mt-2 flex flex-col gap-1">
-            <li v-for="found in searchResults" :key="found.handle">
+          <ul v-else class="mt-2 flex max-h-56 flex-col gap-1 overflow-y-auto">
+            <li v-for="found in visibleCandidates" :key="found.handle">
               <button
                 type="button"
-                class="w-full truncate rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface"
+                class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface"
                 @click="addLine(found)"
               >
-                {{ found.nameKo ?? found.nameJa ?? found.handle }}
-                <span v-if="found.listPriceJpy" class="ml-1 text-xs text-muted">
+                <!-- 어느 표시로 담긴 것인지 보이게 한다 -->
+                <span
+                  class="shrink-0 text-xs"
+                  :class="ownedHandles.has(found.handle) ? 'text-accent' : 'text-premium'"
+                >
+                  {{ ownedHandles.has(found.handle) ? '✓' : '♥' }}
+                </span>
+                <span class="min-w-0 flex-1 truncate">
+                  {{ found.nameKo ?? found.nameJa ?? found.handle }}
+                </span>
+                <span v-if="found.listPriceJpy" class="shrink-0 text-xs text-muted">
                   {{ found.listPriceJpy.toLocaleString() }}엔
                 </span>
               </button>
