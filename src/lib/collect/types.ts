@@ -4,6 +4,17 @@
  * 공식몰(Shopify) 상품 JSON 원본과, 우리 도메인으로 정규화한 형태를 분리해서 둔다.
  */
 
+/**
+ * 굿즈를 어디서 수집했는지.
+ *
+ *   official — 치이카와 마켓(공식몰). Shopify 상품 JSON 을 받는다
+ *   pocket   — 치이카와 포켓 굿즈 스토어. 상품 페이지의 JSON-LD 를 읽는다
+ *
+ * 두 스토어는 같은 굿즈를 팔지 않아서 중복 걱정이 없고, handle 형식도 겹치지 않는다
+ * (공식몰은 JAN 코드 같은 숫자, 포켓은 32자 16진수).
+ */
+export type ItemSource = 'official' | 'pocket';
+
 /** Shopify 상품 JSON의 variant (필요한 필드만) */
 export interface ShopifyVariant {
   id: number;
@@ -59,7 +70,18 @@ export interface ParsedTags {
 
 /** DB에 적재할 정규화된 굿즈 1건 */
 export interface CollectedItem {
-  shopifyProductId: number;
+  /**
+   * 어느 스토어에서 온 굿즈인지.
+   *
+   * 공식몰만 수집하던 시기의 레코드에는 이 필드가 없다.
+   * 읽는 쪽(items/source.ts)에서 'official' 로 채우므로 기존 수집본을 다시 받을 필요는 없다.
+   */
+  source: ItemSource;
+  /**
+   * Shopify 상품 id.
+   * 포켓 스토어는 상품 페이지에 id 를 노출하지 않아 null 이다.
+   */
+  shopifyProductId: number | null;
   /** 상품 handle. 이 스토어에서는 JAN 코드와 동일한 경우가 많다 */
   handle: string;
   jan: string | null;

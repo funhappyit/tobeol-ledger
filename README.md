@@ -56,9 +56,28 @@ npm run dev
 `.env.local` 에 넣을 값은 `.env.example` 의 주석을 참고하세요.
 `SUPABASE_SERVICE_ROLE_KEY` 는 **서버 전용**이며 절대 커밋하지 않습니다.
 
+## 굿즈 수집
+
+```bash
+npx tsx scripts/collect-items.ts     # 공식몰 (상품 JSON 일괄 조회)
+npx tsx scripts/collect-pocket.ts    # 포켓 굿즈 스토어 (sitemap + 구조화 데이터)
+```
+
+스토어마다 산출물을 따로 둡니다(`data/items.jsonl`, `data/items-pocket.jsonl`).
+한쪽 수집이 실패해도 다른 쪽 수집본이 남고, 화면은 두 파일을 합쳐 읽습니다.
+
+포켓 스토어는 태그를 제공하지 않아 캐릭터·종류를 **상품명에서** 판정합니다.
+분류 어휘(`src/lib/collect/vocab.ts`)를 보강한 뒤에는 다시 받지 않고 해석만 고칠 수 있습니다.
+
+```bash
+npx tsx scripts/collect-pocket.ts --reparse   # 요청 없이 분류만 다시
+```
+
 ## 데이터 출처
 
-굿즈 이름·정가·발매일 등 상품 정보는 공식 온라인 스토어의 공개된 상품 데이터를 참고합니다.
+굿즈 이름·정가·발매일 등 상품 정보는 공식 온라인 스토어가 **공개한 상품 데이터**를 참고합니다.
+각 스토어의 `robots.txt` 가 막은 경로는 사용하지 않고, `sitemap` 이 공개한 주소와
+검색엔진용 구조화 데이터(schema.org)만 읽습니다.
 상품 이미지는 자체 저장하지 않고 원본 CDN을 참조합니다.
 
 ## 고지

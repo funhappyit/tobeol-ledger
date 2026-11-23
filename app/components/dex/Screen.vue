@@ -43,15 +43,23 @@ const percent = computed(() =>
   items.value.length > 0 ? Math.round((ownedCount.value / items.value.length) * 100) : 0,
 );
 
+/**
+ * 지금 보고 있는 목록에 섞인 포켓 스토어 굿즈 수.
+ * 전체 건수를 서버에서 받아 두지 않고 여기서 세는 이유는, 캐릭터로 거른 뒤의 수여야 하기 때문이다.
+ */
+const pocketCount = computed(() => items.value.filter((item) => item.source === 'pocket').length);
+
 /** "다른 친구들" 탭에서는 어떤 캐릭터가 묶여 있는지 알려 준다 */
 const subtitle = computed(() => {
   const total = items.value.length.toLocaleString();
+  const mixed =
+    pocketCount.value > 0 ? ` · 포켓 스토어 ${pocketCount.value.toLocaleString()}개 포함` : '';
 
   if (props.character === OTHER_CHARACTERS) {
-    return `전체 ${total}개 · ${minorCharacterNames().join(', ')}와 캐릭터 표기가 없는 굿즈`;
+    return `전체 ${total}개${mixed} · ${minorCharacterNames().join(', ')}와 캐릭터 표기가 없는 굿즈`;
   }
 
-  return `전체 ${total}개 · 카드의 체크를 누르면 토벌 도장이 찍혀요`;
+  return `전체 ${total}개${mixed} · 카드의 체크를 누르면 토벌 도장이 찍혀요`;
 });
 </script>
 

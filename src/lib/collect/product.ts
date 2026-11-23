@@ -117,6 +117,7 @@ export function normalizeProduct(
   const handleAsJan = /^\d{8,14}$/.test(primary.handle) ? primary.handle : null;
 
   return {
+    source: 'official',
     shopifyProductId: primary.id,
     handle: primary.handle,
     jan: variantSku ?? handleAsJan,

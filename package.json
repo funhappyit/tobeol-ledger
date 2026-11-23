@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint app server src scripts",
     "collect": "tsx scripts/collect-items.ts",
+    "collect:pocket": "tsx scripts/collect-pocket.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {

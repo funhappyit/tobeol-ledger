@@ -7,7 +7,7 @@
  */
 
 import { withImageWidth } from '@lib/items/image';
-import { formatJpy } from '@lib/items/labels';
+import { formatJpy, sourceName } from '@lib/items/labels';
 import type { DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -28,6 +28,8 @@ const image = computed(() => withImageWidth(props.item.imageUrl, 400));
 const name = computed(() => props.item.nameKo ?? props.item.nameJa ?? '이름 없음');
 const showOwned = computed(() => props.ready && props.owned);
 const showWish = computed(() => props.ready && props.wish);
+/** 공식몰 외의 스토어에서 온 굿즈만 출처를 띄운다 */
+const store = computed(() => sourceName(props.item.source));
 
 /** 발매일을 카드에 짧게 (2022.07 발매) */
 const released = computed(() => {
@@ -90,12 +92,24 @@ const released = computed(() => {
         </svg>
       </button>
 
-      <span
-        v-if="item.purchaseLimit"
-        class="absolute top-2 left-2 rounded-full bg-foreground/70 px-2 py-0.5 text-xs text-white"
-      >
-        1인 {{ item.purchaseLimit }}개
-      </span>
+      <!--
+        왼쪽 위 배지들. 공식몰 굿즈에는 출처를 적지 않는다(대부분이 공식몰이라 소음이 된다).
+        포켓 스토어처럼 다른 스토어에서 온 굿즈만 어디서 파는 것인지 밝힌다.
+      -->
+      <div class="absolute top-2 left-2 flex flex-col items-start gap-1">
+        <span
+          v-if="store"
+          class="rounded-full bg-accent/90 px-2 py-0.5 text-xs font-medium text-white"
+        >
+          {{ store }}
+        </span>
+        <span
+          v-if="item.purchaseLimit"
+          class="rounded-full bg-foreground/70 px-2 py-0.5 text-xs text-white"
+        >
+          1인 {{ item.purchaseLimit }}개
+        </span>
+      </div>
     </div>
 
     <div class="flex flex-1 flex-col gap-1.5 p-3">

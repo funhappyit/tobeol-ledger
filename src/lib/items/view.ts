@@ -9,7 +9,7 @@
  * 검색 대조용 문자열도 서버에서 미리 만들어 두면 원본 태그를 통째로 보낼 필요가 없다.
  */
 
-import type { CollectedItem } from '../collect/types';
+import type { CollectedItem, ItemSource } from '../collect/types';
 
 /**
  * 여기 있는 항목은 전부 화면이 실제로 쓰는 것이다.
@@ -26,6 +26,13 @@ export interface DexItem {
   categoryCodes: string[];
   /** 1회계당 구매 수량 제한. 공식몰에서 수량을 묶어 파는 굿즈 표시용 */
   purchaseLimit: number | null;
+  /**
+   * 공식몰이 아닌 스토어의 굿즈일 때만 들어 있다. 카드에 출처 배지를 띄우는 데 쓴다.
+   *
+   * 값이 없으면 공식몰이라는 뜻이다. 전체 1만 건 중 공식몰이 대부분이라
+   * `"source":"official"` 을 매 건에 실어 보내면 그것만으로 응답이 200KB 늘어난다.
+   */
+  source?: ItemSource;
   /** 검색 대조용. 한국어명·일본어명·원본 태그를 소문자로 합쳐 둔 것 */
   search: string;
 }
@@ -40,6 +47,8 @@ export function toDexItem(item: CollectedItem): DexItem {
     releasedOn: item.parsed.releasedOn,
     categoryCodes: item.parsed.categoryCodes,
     purchaseLimit: item.parsed.purchaseLimit,
+    // undefined 인 키는 JSON 에 실리지 않는다. 공식몰 굿즈는 이 항목을 통째로 생략한다
+    source: item.source === 'official' ? undefined : item.source,
     search: [item.nameKo, item.nameJa, item.handle, ...item.tagsRaw]
       .filter((value): value is string => typeof value === 'string')
       .join(' ')

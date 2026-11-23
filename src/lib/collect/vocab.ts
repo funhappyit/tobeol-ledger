@@ -57,6 +57,64 @@ export const CATEGORY_TAGS: Record<string, CategoryDef> = {
 };
 
 /** 판매 조건·상태를 나타내는 태그 -> 플래그 코드 */
+/**
+ * 상품명에서 종류를 찾을 때 쓰는 키워드.
+ *
+ * 포켓 굿즈 스토어는 태그를 제공하지 않는다. 대신 상품명이 규칙적이다.
+ *   `ちいかわぽけっと 江戸なクリアファイル`
+ *   `ちいかわぽけっと ピクニックなマスコット（ちいかわ）`
+ * 품목 이름이 끝에 붙는 형태라 상품명만으로 종류를 판정할 수 있다.
+ *
+ * 위의 CATEGORY_TAGS 와 따로 두는 이유는 성격이 다르기 때문이다.
+ * 저쪽은 공식몰이 붙인 분류어(`文房具`, `雑貨`)이고, 이쪽은 상품명에 실제로 나오는
+ * 품목어(`クリアファイル`, `アクリルスタンド`)다. 분류어는 상품명에 나오지 않는다.
+ *
+ * 긴 키워드가 짧은 키워드를 포함하는 경우가 있어(`ハンドタオル` ⊃ `タオル`)
+ * 매칭하는 쪽에서 긴 것부터 시도해야 한다.
+ */
+export const CATEGORY_NAME_KEYWORDS: Record<string, CategoryDef> = {
+  クリアファイル: { code: 'clear_file', nameKo: '클리어파일' },
+  アクリルスタンド: { code: 'acrylic_stand', nameKo: '아크릴 스탠드' },
+  アクリルキーホルダー: { code: 'keyholder', nameKo: '키홀더' },
+  ラバーキーホルダー: { code: 'keyholder', nameKo: '키홀더' },
+  キーホルダー: { code: 'keyholder', nameKo: '키홀더' },
+  カンバッジ: { code: 'can_badge', nameKo: '캔뱃지' },
+  缶バッジ: { code: 'can_badge', nameKo: '캔뱃지' },
+  ぬいぐるみ: { code: 'plush', nameKo: '인형' },
+  マスコット: { code: 'mascot', nameKo: '마스코트' },
+  ハンドタオル: { code: 'hand_towel', nameKo: '손수건' },
+  タオル: { code: 'towel', nameKo: '타월' },
+  トートバッグ: { code: 'bag', nameKo: '가방' },
+  ポーチ: { code: 'pouch', nameKo: '파우치' },
+  ステッカー: { code: 'sticker', nameKo: '스티커' },
+  シール: { code: 'sticker', nameKo: '스티커' },
+  Tシャツ: { code: 'tshirt_hoodie', nameKo: '티셔츠·후드' },
+  トレーナー: { code: 'tshirt_hoodie', nameKo: '티셔츠·후드' },
+  靴下: { code: 'socks', nameKo: '양말' },
+  ソックス: { code: 'socks', nameKo: '양말' },
+  マフラー: { code: 'apparel', nameKo: '의류' },
+  手ぬぐい: { code: 'towel', nameKo: '타월' },
+  巾着: { code: 'pouch', nameKo: '파우치' },
+  // 주방·식기류는 한 종류로 묶는다. 컵·접시·받침을 따로 세면 필터가 산만해진다
+  マグカップ: { code: 'kitchen', nameKo: '주방' },
+  ティーカップ: { code: 'kitchen', nameKo: '주방' },
+  プレート: { code: 'kitchen', nameKo: '주방' },
+  コースター: { code: 'kitchen', nameKo: '주방' },
+  // 목욕·손 관리 용품
+  バスソルト: { code: 'amenity', nameKo: '어메니티' },
+  ハンドクリーム: { code: 'amenity', nameKo: '어메니티' },
+  チャーム: { code: 'charm', nameKo: '참·장식' },
+  ケース: { code: 'case', nameKo: '케이스' },
+  ボールペン: { code: 'stationery', nameKo: '문구' },
+  ノート: { code: 'stationery', nameKo: '문구' },
+  カード: { code: 'stationery', nameKo: '문구' },
+  メモ: { code: 'memo', nameKo: '메모·떡메' },
+  // 장식·소품
+  オーナメント: { code: 'goods', nameKo: '잡화' },
+  スノードーム: { code: 'goods', nameKo: '잡화' },
+  ブランケット: { code: 'goods', nameKo: '잡화' },
+};
+
 export const FLAG_TAGS: Record<string, string> = {
   海外NG: 'overseas_ng',
   数量制限: 'quantity_limited',
