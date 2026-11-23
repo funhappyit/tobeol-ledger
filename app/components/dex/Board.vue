@@ -28,9 +28,25 @@ const OWNED_FILTERS: { value: OwnedFilter; label: string }[] = [
   { value: 'wish', label: '토벌 리스트' },
 ];
 
+/**
+ * 어느 스토어 굿즈를 볼지.
+ *
+ * 이 필터가 없으면 포켓 스토어 굿즈를 사실상 볼 수 없다.
+ * 그쪽은 발매일을 공개하지 않아 발매일순 정렬에서 전부 맨 뒤로 가는데,
+ * 전체가 1만 건이라 "더 보기"를 수십 번 눌러야 닿기 때문이다.
+ */
+type SourceFilter = 'all' | 'official' | 'pocket';
+
+const SOURCE_FILTERS: { value: SourceFilter; label: string }[] = [
+  { value: 'all', label: '모든 스토어' },
+  { value: 'official', label: '공식몰' },
+  { value: 'pocket', label: '포켓 스토어' },
+];
+
 const query = ref('');
 const category = ref<string | null>(null);
 const ownedFilter = ref<OwnedFilter>('all');
+const sourceFilter = ref<SourceFilter>('all');
 const shown = ref(PAGE_SIZE);
 
 const { owned, wish, ready, toggle } = useMarks();
@@ -50,6 +66,9 @@ const categories = computed(() => {
     .sort((a, b) => b.count - a.count);
 });
 
+/** 포켓 굿즈가 섞여 있을 때만 스토어 필터를 띄운다 */
+const hasOtherStore = computed(() => props.items.some((item) => item.source === 'pocket'));
+
 const visible = computed(() => {
   const needle = query.value.trim().toLowerCase();
 
@@ -59,6 +78,11 @@ const visible = computed(() => {
     }
 
     if (category.value !== null && !item.categoryCodes.includes(category.value)) {
+      return false;
+    }
+
+    // 공식몰 굿즈는 응답에 source 가 실리지 않는다. 값이 없으면 공식몰이라는 뜻이다
+    if (sourceFilter.value !== 'all' && (item.source ?? 'official') !== sourceFilter.value) {
       return false;
     }
 
@@ -80,7 +104,7 @@ const rendered = computed(() => visible.value.slice(0, shown.value));
 const remaining = computed(() => visible.value.length - rendered.value.length);
 
 // 조건이 바뀌면 처음부터 다시 그린다
-watch([query, category, ownedFilter], () => {
+watch([query, category, ownedFilter, sourceFilter], () => {
   shown.value = PAGE_SIZE;
 });
 
@@ -178,6 +202,26 @@ function pickCategory(code: string | null): void {
         >
           {{ filter.label }}
         </button>
+
+        <!-- 스토어 필터. 성격이 다른 조건이라 선으로 끊어 둔다 -->
+        <template v-if="hasOtherStore">
+          <span class="mx-1 h-6 w-px shrink-0 self-center bg-border-soft" aria-hidden="true" />
+          <button
+            v-for="filter in SOURCE_FILTERS"
+            :key="filter.value"
+            type="button"
+            :aria-pressed="sourceFilter === filter.value"
+            class="shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors"
+            :class="
+              sourceFilter === filter.value
+                ? 'border-foreground bg-foreground text-surface'
+                : 'border-border-soft text-muted hover:text-foreground'
+            "
+            @click="sourceFilter = filter.value"
+          >
+            {{ filter.label }}
+          </button>
+        </template>
       </ChipScroller>
     </div>
 
