@@ -243,6 +243,7 @@ function pickCategory(code: string | null): void {
     <LedgerRecordDialog
       v-if="recording"
       :item="recording"
+      :owned-handles="owned"
       @close="recording = null"
       @saved="onSaved"
     />

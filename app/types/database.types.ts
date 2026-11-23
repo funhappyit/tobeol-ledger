@@ -20,26 +20,33 @@ export type UserMarkRow = {
 };
 
 /**
- * 구매 기록.
- * 정가(list_price_jpy)와 환율(fx_rate)은 구매 시점 값을 복사해 둔 것이다.
+ * 한 번의 구매.
+ * 배송비·수수료는 굿즈가 몇 개든 주문당 한 번 붙으므로 여기에 둔다.
+ * 환율(fx_rate)은 구매 시점 값을 복사해 둔 것이다.
  * 지금 값으로 다시 계산하면 과거 기록의 플미율이 흔들린다.
  */
-export type AcquisitionRow = {
+export type PurchaseRow = {
   id: string;
   user_id: string;
-  handle: string;
-  name_snapshot: string | null;
   source: string;
   purchased_on: string;
-  quantity: number;
-  item_price_krw: number;
   shipping_krw: number;
   fee_krw: number;
-  list_price_jpy: number | null;
   fx_rate: number | null;
   fx_rate_manual: boolean;
   memo: string | null;
   created_at: string;
+};
+
+/** 구매에 담긴 굿즈. 정가(list_price_jpy)도 구매 시점 값을 복사해 둔다 */
+export type PurchaseItemRow = {
+  id: string;
+  purchase_id: string;
+  handle: string;
+  name_snapshot: string | null;
+  quantity: number;
+  item_price_krw: number;
+  list_price_jpy: number | null;
 };
 
 export type Database = {
@@ -51,13 +58,19 @@ export type Database = {
         Update: Partial<UserMarkRow>;
         Relationships: [];
       };
-      acquisitions: {
-        Row: AcquisitionRow;
-        Insert: Omit<AcquisitionRow, 'id' | 'created_at'> & {
+      purchases: {
+        Row: PurchaseRow;
+        Insert: Omit<PurchaseRow, 'id' | 'created_at'> & {
           id?: string;
           created_at?: string;
         };
-        Update: Partial<AcquisitionRow>;
+        Update: Partial<PurchaseRow>;
+        Relationships: [];
+      };
+      purchase_items: {
+        Row: PurchaseItemRow;
+        Insert: Omit<PurchaseItemRow, 'id'> & { id?: string };
+        Update: Partial<PurchaseItemRow>;
         Relationships: [];
       };
     };

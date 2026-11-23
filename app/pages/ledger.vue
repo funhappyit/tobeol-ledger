@@ -11,43 +11,24 @@
  */
 
 import {
-  calculatePremium,
+  calculateItem,
+  calculatePurchase,
   formatKrw,
   formatPremium,
   sourceName,
   summarize,
-  type Acquisition,
+  type Purchase,
 } from '@lib/ledger/calc';
-import type { AcquisitionRow, Database } from '~/types/database.types';
+import type { Database } from '~/types/database.types';
 
 useHead({ title: '내 장부' });
 
 const supabase = useSupabaseClient<Database>();
 const user = useSupabaseUser();
 
-const records = ref<Acquisition[]>([]);
+const purchases = ref<Purchase[]>([]);
 const loading = ref(true);
 const errorMessage = ref<string | null>(null);
-
-/** DB 행을 계산 모듈이 쓰는 모양으로 바꾼다 */
-function toAcquisition(row: AcquisitionRow): Acquisition {
-  return {
-    id: row.id,
-    handle: row.handle,
-    source: row.source,
-    purchasedOn: row.purchased_on,
-    quantity: row.quantity,
-    itemPriceKrw: row.item_price_krw,
-    shippingKrw: row.shipping_krw,
-    feeKrw: row.fee_krw,
-    listPriceJpy: row.list_price_jpy,
-    fxRate: row.fx_rate === null ? null : Number(row.fx_rate),
-    memo: row.memo,
-  };
-}
-
-/** 이름은 기록 시점 값을 그대로 쓴다. 수집본이 없어도 무엇을 샀는지 남아야 한다 */
-const names = ref<Record<string, string>>({});
 
 async function load(): Promise<void> {
   if (!user.value) {
@@ -58,49 +39,91 @@ async function load(): Promise<void> {
   loading.value = true;
   errorMessage.value = null;
 
-  const { data, error } = await supabase
-    .from('acquisitions')
+  // 주문과 담긴 굿즈를 따로 받아 묶는다.
+  // 중첩 select 를 쓰면 손으로 적은 타입으로는 결과가 추론되지 않는다.
+  const { data: rows, error } = await supabase
+    .from('purchases')
     .select('*')
     .order('purchased_on', { ascending: false });
 
-  loading.value = false;
-
   if (error) {
+    loading.value = false;
     errorMessage.value = error.message;
     return;
   }
 
-  const rows = data ?? [];
-  records.value = rows.map(toAcquisition);
-  names.value = Object.fromEntries(
-    rows.map((row) => [row.id, row.name_snapshot ?? row.handle]),
-  );
+  const orders = rows ?? [];
+  if (orders.length === 0) {
+    purchases.value = [];
+    loading.value = false;
+    return;
+  }
+
+  const { data: itemRows, error: itemsError } = await supabase
+    .from('purchase_items')
+    .select('*')
+    .in(
+      'purchase_id',
+      orders.map((order) => order.id),
+    );
+
+  loading.value = false;
+
+  if (itemsError) {
+    errorMessage.value = itemsError.message;
+    return;
+  }
+
+  const byPurchase = new Map<string, Purchase['items']>();
+  for (const row of itemRows ?? []) {
+    const list = byPurchase.get(row.purchase_id) ?? [];
+    list.push({
+      handle: row.handle,
+      name: row.name_snapshot ?? row.handle,
+      quantity: row.quantity,
+      itemPriceKrw: row.item_price_krw,
+      listPriceJpy: row.list_price_jpy,
+    });
+    byPurchase.set(row.purchase_id, list);
+  }
+
+  purchases.value = orders.map((order) => ({
+    id: order.id,
+    source: order.source,
+    purchasedOn: order.purchased_on,
+    shippingKrw: order.shipping_krw,
+    feeKrw: order.fee_krw,
+    fxRate: order.fx_rate === null ? null : Number(order.fx_rate),
+    memo: order.memo,
+    items: byPurchase.get(order.id) ?? [],
+  }));
 }
 
 async function remove(id: string): Promise<void> {
-  const { error } = await supabase.from('acquisitions').delete().eq('id', id);
+  // purchase_items 는 on delete cascade 라 함께 지워진다
+  const { error } = await supabase.from('purchases').delete().eq('id', id);
 
   if (error) {
     errorMessage.value = error.message;
     return;
   }
 
-  records.value = records.value.filter((record) => record.id !== id);
+  purchases.value = purchases.value.filter((purchase) => purchase.id !== id);
 }
 
 watch(user, load, { immediate: true });
 
-const summary = computed(() => summarize(records.value));
+const summary = computed(() => summarize(purchases.value));
 
-/**
- * 기록과 계산 결과를 미리 짝지어 둔다.
- * 템플릿에서 calculatePremium 을 직접 부르면 한 행에 여러 번 계산된다.
- */
+/** 주문과 계산 결과를 미리 짝지어 둔다. 템플릿에서 매번 계산하지 않도록 */
 const rows = computed(() =>
-  records.value.map((record) => ({
-    record,
-    name: names.value[record.id] ?? record.handle,
-    result: calculatePremium(record),
+  purchases.value.map((purchase) => ({
+    purchase,
+    result: calculatePurchase(purchase),
+    lines: purchase.items.map((item) => ({
+      item,
+      result: calculateItem(item, purchase.fxRate),
+    })),
   })),
 );
 </script>
@@ -140,12 +163,12 @@ const rows = computed(() =>
       </p>
 
       <div
-        v-else-if="records.length === 0"
+        v-else-if="purchases.length === 0"
         class="rounded-2xl border border-dashed border-border-soft bg-surface p-10 text-center"
       >
         <p class="text-lg font-semibold">아직 기록이 없습니다</p>
         <p class="mt-2 text-sm text-muted">
-          도감에서 굿즈 카드의 <strong>구매 기록</strong> 을 눌러 남겨 보세요.
+          도감에서 토벌 완료로 체크한 뒤 <strong>구매 기록</strong> 을 눌러 남겨 보세요.
         </p>
         <NuxtLink
           to="/dex"
@@ -161,7 +184,9 @@ const rows = computed(() =>
           <div class="rounded-2xl border border-border-soft bg-surface p-4">
             <p class="text-xs text-muted">총지출</p>
             <p class="mt-1 text-xl font-bold">{{ formatKrw(summary.totalKrw) }}</p>
-            <p class="mt-1 text-xs text-muted">{{ summary.count }}건</p>
+            <p class="mt-1 text-xs text-muted">
+              {{ summary.purchaseCount }}번 구매 · 굿즈 {{ summary.itemCount }}개
+            </p>
           </div>
 
           <div class="rounded-2xl border border-border-soft bg-surface p-4">
@@ -190,44 +215,69 @@ const rows = computed(() =>
         </section>
 
         <p v-if="summary.unknownCount > 0" class="mt-3 text-xs text-muted">
-          {{ summary.unknownCount }}건은 정가나 환율을 몰라 플미 계산에서 빠졌습니다.
+          굿즈 {{ summary.unknownCount }}개는 정가나 환율을 몰라 플미 계산에서 빠졌습니다.
         </p>
 
-        <!-- 기록 목록 -->
-        <ul class="mt-6 flex flex-col gap-2">
+        <!-- 주문 목록 -->
+        <ul class="mt-6 flex flex-col gap-3">
           <li
             v-for="row in rows"
-            :key="row.record.id"
+            :key="row.purchase.id"
             class="rounded-2xl border border-border-soft bg-surface p-4"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="truncate text-sm font-semibold">{{ row.name }}</p>
-                <p class="mt-1 text-xs text-muted">
-                  {{ row.record.purchasedOn }} · {{ sourceName(row.record.source) }}
-                  <template v-if="row.record.quantity > 1"> · {{ row.record.quantity }}개</template>
+                <p class="text-sm font-semibold">
+                  {{ row.purchase.purchasedOn }} · {{ sourceName(row.purchase.source) }}
+                  <span class="ml-1 font-normal text-muted">굿즈 {{ row.purchase.items.length }}개</span>
                 </p>
-                <p v-if="row.record.memo" class="mt-1 text-xs text-muted">{{ row.record.memo }}</p>
+                <p v-if="row.purchase.memo" class="mt-1 text-xs text-muted">{{ row.purchase.memo }}</p>
               </div>
 
               <button
                 type="button"
                 class="shrink-0 text-xs text-muted transition-colors hover:text-premium"
-                @click="remove(row.record.id)"
+                @click="remove(row.purchase.id)"
               >
                 삭제
               </button>
             </div>
 
-            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+            <!-- 담긴 굿즈 -->
+            <ul class="mt-3 flex flex-col gap-1.5 border-t border-border-soft pt-3">
+              <li
+                v-for="(line, index) in row.lines"
+                :key="`${line.item.handle}-${index}`"
+                class="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span class="min-w-0 truncate">
+                  {{ line.item.name }}
+                  <span v-if="line.item.quantity > 1" class="text-xs text-muted">
+                    ×{{ line.item.quantity }}
+                  </span>
+                </span>
+                <span class="shrink-0 text-right">
+                  {{ formatKrw(line.item.itemPriceKrw) }}
+                  <span
+                    v-if="line.result.premiumKrw !== null"
+                    class="ml-1.5 text-xs"
+                    :class="line.result.premiumKrw > 0 ? 'text-premium' : 'text-fair'"
+                  >
+                    {{ formatPremium(line.result.premiumKrw) }}
+                  </span>
+                </span>
+              </li>
+            </ul>
+
+            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-border-soft pt-3 text-xs sm:grid-cols-4">
               <div class="flex justify-between sm:block">
                 <dt class="text-muted">상품값</dt>
-                <dd class="font-medium sm:mt-0.5">{{ formatKrw(row.record.itemPriceKrw) }}</dd>
+                <dd class="font-medium sm:mt-0.5">{{ formatKrw(row.result.itemTotalKrw) }}</dd>
               </div>
               <div class="flex justify-between sm:block">
-                <dt class="text-muted">정가 환산</dt>
+                <dt class="text-muted">배송비·수수료</dt>
                 <dd class="font-medium sm:mt-0.5">
-                  {{ row.result.listPriceKrw === null ? '-' : formatKrw(row.result.listPriceKrw) }}
+                  {{ formatKrw(row.purchase.shippingKrw + row.purchase.feeKrw) }}
                 </dd>
               </div>
               <div class="flex justify-between sm:block">
