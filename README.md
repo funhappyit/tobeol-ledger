@@ -56,6 +56,51 @@ npm run dev
 `.env.local` 에 넣을 값은 `.env.example` 의 주석을 참고하세요.
 `SUPABASE_SERVICE_ROLE_KEY` 는 **서버 전용**이며 절대 커밋하지 않습니다.
 
+굿즈를 어디서 읽을지 못박고 싶으면 `ITEMS_SOURCE` 를 씁니다.
+
+```
+ITEMS_SOURCE=db      # DB 만. 실패해도 수집본 파일로 넘어가지 않음
+ITEMS_SOURCE=files   # 수집본 파일만. 수집 결과를 바로 확인할 때
+```
+
+## 배포
+
+```
+GitHub Actions (cron)  →  수집  →  Supabase 적재
+                                        ↓
+                        Vercel (Nuxt)  읽기 + ISR 5분 캐시
+```
+
+수집을 Vercel Cron 으로 돌리지 않는 이유는 함수 시간 한도입니다.
+공식몰 수집이 2~3분, 포켓 수집이 5~6분 걸리는데 한도는 Hobby 60초 / Pro 300초입니다.
+그래서 수집은 Actions 가 맡고 Vercel 은 읽기만 합니다.
+
+ISR 로 캐시하는 화면은 **누구에게나 같은 화면**뿐입니다(`/`, `/dex`).
+캐시된 HTML 은 모든 방문자에게 그대로 나가므로, 개인 자료가 실리는 `/ledger` 는 캐시하지 않고
+머리글의 로그인 표시도 브라우저에서만 그립니다.
+
+### 환경변수를 어디에 두는가
+
+| 이름 | 로컬 | Vercel | GitHub Secrets |
+| --- | :-: | :-: | :-: |
+| `NUXT_PUBLIC_SUPABASE_URL` | ✓ | ✓ | ✓ (`SUPABASE_URL`) |
+| `NUXT_PUBLIC_SUPABASE_KEY` (publishable) | ✓ | ✓ | |
+| `SUPABASE_SERVICE_ROLE_KEY` (secret) | ✓ | **✗** | ✓ |
+
+`service_role` 키는 RLS 를 통째로 우회합니다. 앱은 읽기만 하므로 publishable 키로 충분하고,
+이 키를 Vercel 에 두면 서버 코드가 실수로 집어 쓸 길이 생깁니다. 적재하는 쪽에만 둡니다.
+
+### 자동 수집
+
+`.github/workflows/collect.yml` 이 맡습니다.
+
+| 대상 | 주기 |
+| --- | --- |
+| 공식몰 | 매일 03:00 KST |
+| 포켓 스토어 | 일요일 04:00 KST |
+
+Actions 탭에서 **Run workflow** 로 스토어를 골라 수동 실행할 수도 있습니다.
+
 ## 굿즈 수집
 
 ```bash

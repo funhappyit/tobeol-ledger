@@ -42,7 +42,18 @@ function isActive(to: string): boolean {
         </NuxtLink>
       </nav>
 
-      <UserMenu />
+      <!--
+        로그인 상태는 반드시 브라우저에서만 그린다.
+        도감·홈은 ISR 로 캐시된 HTML 을 모두에게 돌려주는 화면이라,
+        서버에서 그리면 먼저 들른 사람의 계정이 담긴 HTML 이 캐시돼 남에게 나간다.
+        자리만 미리 잡아 두어 메뉴가 뜰 때 머리글이 흔들리지 않게 한다.
+      -->
+      <ClientOnly>
+        <UserMenu />
+        <template #fallback>
+          <div class="ml-auto h-[34px] w-20" aria-hidden="true" />
+        </template>
+      </ClientOnly>
     </div>
   </header>
 </template>
