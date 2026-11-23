@@ -348,9 +348,9 @@ describe('normalizePocketItem', () => {
     assert.ok(item?.imageUrl?.includes('f3a87c65c74cbf8be9d145952a25a066'));
   });
 
-  it('상품명은 일본어 자리에 넣는다', () => {
+  it('일본어 원문을 남기고 한국어 자리에는 옮긴 이름을 넣는다', () => {
     assert.equal(item?.nameJa, 'ちいかわぽけっと 江戸なクリアファイル');
-    assert.equal(item?.nameKo, null);
+    assert.equal(item?.nameKo, '치이카와 포켓 에도 클리어파일');
   });
 
   /** 발매일을 알 수 있는 경로가 없다. 이미지 버전으로 추측해 넣지 않는다 */

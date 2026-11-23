@@ -27,6 +27,7 @@
  */
 
 import { httpGet } from './http';
+import { translatePocketName } from './pocket-name';
 import type { CollectedItem, ParsedTags } from './types';
 import { CATEGORY_NAME_KEYWORDS, CHARACTER_TAGS } from './vocab';
 
@@ -417,7 +418,8 @@ export function normalizePocketItem(
     shopifyProductId: null,
     handle,
     jan: null,
-    nameKo: null,
+    // 이 스토어는 일본어 이름만 준다. 사전으로 옮긴 이름을 한국어 자리에 넣는다
+    nameKo: translatePocketName(name),
     nameJa: name,
     descriptionKo: null,
     productTypeKo: null,
