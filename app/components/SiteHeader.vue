@@ -11,6 +11,7 @@ const route = useRoute();
 const NAV = [
   { to: '/', label: '홈' },
   { to: '/dex', label: '도감' },
+  { to: '/ledger', label: '내 장부' },
 ];
 
 function isActive(to: string): boolean {

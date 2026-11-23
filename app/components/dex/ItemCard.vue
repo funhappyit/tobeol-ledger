@@ -19,7 +19,10 @@ const props = defineProps<{
   ready: boolean;
 }>();
 
-const emit = defineEmits<{ toggle: [kind: MarkKind, handle: string] }>();
+const emit = defineEmits<{
+  toggle: [kind: MarkKind, handle: string];
+  record: [item: DexItem];
+}>();
 
 const image = computed(() => withImageWidth(props.item.imageUrl, 400));
 const name = computed(() => props.item.nameKo ?? props.item.nameJa ?? '이름 없음');
@@ -128,6 +131,15 @@ const released = computed(() => {
           </svg>
         </button>
       </div>
+
+      <!-- 이 앱의 본체. 얼마에 샀는지 남겨야 플미가 계산된다 -->
+      <button
+        type="button"
+        class="mt-1 w-full rounded-lg border border-border-soft py-1.5 text-xs text-muted transition-colors hover:border-accent hover:text-foreground"
+        @click="emit('record', item)"
+      >
+        구매 기록
+      </button>
     </div>
   </li>
 </template>

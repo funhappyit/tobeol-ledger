@@ -88,6 +88,34 @@ function onToggle(kind: MarkKind, handle: string): void {
   toggle(kind, handle);
 }
 
+/** 구매 기록 입력 중인 굿즈. null 이면 닫혀 있다 */
+const recording = ref<DexItem | null>(null);
+const user = useSupabaseUser();
+const savedNotice = ref(false);
+
+function openRecord(item: DexItem): void {
+  if (!user.value) {
+    // 기록은 계정에 묶이는 자료라 로그인이 있어야 한다
+    navigateTo('/login');
+    return;
+  }
+  recording.value = item;
+}
+
+function onSaved(): void {
+  // 산 것이니 토벌 완료로도 표시해 준다. 따로 체크하게 두면 빠뜨리기 쉽다
+  const handle = recording.value?.handle;
+  if (handle && !owned.value.has(handle)) {
+    toggle('owned', handle);
+  }
+
+  recording.value = null;
+  savedNotice.value = true;
+  setTimeout(() => {
+    savedNotice.value = false;
+  }, 3000);
+}
+
 function pickCategory(code: string | null): void {
   category.value = category.value === code ? null : code;
 }
@@ -203,6 +231,7 @@ function pickCategory(code: string | null): void {
           :wish="wish.has(item.handle)"
           :ready="ready"
           @toggle="onToggle"
+          @record="openRecord"
         />
       </ul>
 
@@ -215,5 +244,20 @@ function pickCategory(code: string | null): void {
         더 보기 <span class="text-muted">({{ remaining.toLocaleString() }}개 남음)</span>
       </button>
     </template>
+
+    <LedgerRecordDialog
+      v-if="recording"
+      :item="recording"
+      @close="recording = null"
+      @saved="onSaved"
+    />
+
+    <p
+      v-if="savedNotice"
+      class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-5 py-2.5 text-sm text-surface shadow-lg"
+    >
+      기록했습니다.
+      <NuxtLink to="/ledger" class="ml-1 underline">내 장부 보기</NuxtLink>
+    </p>
   </div>
 </template>
