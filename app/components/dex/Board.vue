@@ -90,11 +90,11 @@ function onToggle(kind: MarkKind, handle: string): void {
 
 /** 구매 기록 입력 중인 굿즈. null 이면 닫혀 있다 */
 const recording = ref<DexItem | null>(null);
-const user = useSupabaseUser();
+const userId = useUserId();
 const savedNotice = ref(false);
 
 function openRecord(item: DexItem): void {
-  if (!user.value) {
+  if (!userId.value) {
     // 기록은 계정에 묶이는 자료라 로그인이 있어야 한다
     navigateTo('/login');
     return;

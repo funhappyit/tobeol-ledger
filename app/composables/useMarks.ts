@@ -58,7 +58,8 @@ function writeKey(kind: MarkKind, value: string[]): void {
 
 export function useMarks() {
   const supabase = useSupabaseClient<Database>();
-  const user = useSupabaseUser();
+  // useSupabaseUser() 는 JWT 클레임을 돌려주고 식별자가 sub 이라, 한곳에 모아 둔 것을 쓴다
+  const userId = useUserId();
 
   const ownedList = useState<string[]>('marks:owned', () => []);
   const wishList = useState<string[]>('marks:wish', () => []);
@@ -161,13 +162,13 @@ export function useMarks() {
 
   // 로그인하면 서버와 합치고, 로그아웃하면 로컬 기록만 남긴다
   watch(
-    user,
+    userId,
     (value) => {
       if (!import.meta.client) {
         return;
       }
       if (value) {
-        void syncWithServer(value.id);
+        void syncWithServer(value);
       } else {
         syncedFor.value = null;
       }
@@ -183,19 +184,19 @@ export function useMarks() {
     list.value = next;
     writeKey(kind, next);
 
-    const userId = user.value?.id;
-    if (!userId) {
+    const id = userId.value;
+    if (!id) {
       return;
     }
 
     // 서버 반영은 화면을 막지 않는다. 실패하면 로컬 기록이 남아 다음 로그인 때 다시 올라간다
     void (async () => {
       const { error } = adding
-        ? await supabase.from('user_marks').upsert({ user_id: userId, handle, kind })
+        ? await supabase.from('user_marks').upsert({ user_id: id, handle, kind })
         : await supabase
             .from('user_marks')
             .delete()
-            .eq('user_id', userId)
+            .eq('user_id', id)
             .eq('handle', handle)
             .eq('kind', kind);
 

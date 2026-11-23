@@ -24,7 +24,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; saved: [] }>();
 
 const supabase = useSupabaseClient<Database>();
-const user = useSupabaseUser();
+const userId = useUserId();
 
 /** 주문에 담긴 줄 하나 */
 interface Line {
@@ -180,8 +180,7 @@ const canSave = computed(
 );
 
 async function save(): Promise<void> {
-  const userId = user.value?.id;
-  if (!userId) {
+  if (!userId.value) {
     errorMessage.value = '로그인이 필요합니다.';
     return;
   }
@@ -196,7 +195,7 @@ async function save(): Promise<void> {
   const { data: created, error: purchaseError } = await supabase
     .from('purchases')
     .insert({
-      user_id: userId,
+      user_id: userId.value,
       source: source.value,
       purchased_on: purchasedOn.value,
       shipping_krw: Math.round(shipping.value ?? 0),
