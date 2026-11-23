@@ -63,26 +63,22 @@ async function readJsonl(path: string, fallbackSource: ItemSource): Promise<Coll
 }
 
 /**
- * 발매일 최신순. 발매일이 없는 굿즈는 뒤로 보내고, 그들끼리는 최종 수정 시각 최신순으로.
+ * 정렬에 쓸 날짜. 발매일이 있으면 발매일, 없으면 최종 수정 시각의 날짜 부분.
  *
- * 포켓 스토어는 발매일을 공개하지 않아 전부 발매일이 없다.
- * 그대로 두면 수백 건이 아무 순서 없이 뒤에 쌓이므로, 최소한 신상이 앞에 오게 한다.
+ * 발매일이 없는 굿즈를 통째로 뒤로 보내면 안 된다.
+ * 포켓 스토어는 발매일을 공개하지 않아 그쪽 굿즈가 전부 뒤로 가는데,
+ * 전체가 1만 건이라 목록 끝까지 가지 않으면 한 건도 볼 수 없게 된다.
+ *
+ * 최종 수정 시각은 발매일이 아니지만 "언제쯤 올라온 굿즈인지"는 말해 준다.
+ * 최신순으로 늘어놓는 용도로는 충분하고, 화면에 날짜로 띄우지는 않는다.
  */
-function compareByRelease(a: CollectedItem, b: CollectedItem): number {
-  const left = a.parsed.releasedOn;
-  const right = b.parsed.releasedOn;
+function sortKey(item: CollectedItem): string {
+  return item.parsed.releasedOn ?? (item.updatedAt ?? '').slice(0, 10);
+}
 
-  if (left && right) {
-    return right.localeCompare(left);
-  }
-  if (left) {
-    return -1;
-  }
-  if (right) {
-    return 1;
-  }
-
-  return (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '');
+/** 최신순 */
+function compareByDate(a: CollectedItem, b: CollectedItem): number {
+  return sortKey(b).localeCompare(sortKey(a));
 }
 
 export async function getItems(): Promise<ItemListResult> {
@@ -109,7 +105,7 @@ export async function getItems(): Promise<ItemListResult> {
     }
   }
 
-  items.sort(compareByRelease);
+  items.sort(compareByDate);
 
   return { items, currencies: [...currencies] };
 }
