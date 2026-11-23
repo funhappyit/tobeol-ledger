@@ -10,7 +10,6 @@
  */
 
 import { ALL_CHARACTERS, countByCharacter, filterByCharacter, isKnownCharacter } from '@lib/items/dex';
-import { getItems } from '@lib/items/source';
 import { toDexItem, type DexItem } from '@lib/items/view';
 
 export interface DexResponse {

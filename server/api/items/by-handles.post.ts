@@ -7,7 +7,6 @@
  * GET 이 아니라 POST 인 이유는 handle 이 수백 개가 되면 주소 길이 제한에 걸리기 때문이다.
  */
 
-import { getItems } from '@lib/items/source';
 import { toDexItem, type DexItem } from '@lib/items/view';
 
 /** 한 번에 받을 수 있는 최대 개수. 이보다 많이 표시했다면 검색으로 좁히게 한다 */
