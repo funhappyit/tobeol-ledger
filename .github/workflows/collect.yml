@@ -1,0 +1,100 @@
+# 굿즈 수집
+#
+# 수집을 Vercel Cron 으로 돌릴 수 없어서 여기서 돈다.
+# 공식몰 수집은 2~3분, 포켓 수집은 5~6분이 걸리는데 Vercel 함수 한도는
+# Hobby 60초 / Pro 300초다. 포켓은 Pro 로도 넘는다.
+#
+# 수집한 결과는 Supabase 에 넣는다. 러너의 파일은 작업이 끝나면 사라지고,
+# 저장소에 커밋하면 15MB 짜리 파일이 매일 쌓여 저장소가 불어난다.
+#
+# 주기를 나눈 이유:
+#   공식몰 — 신상·재입고가 잦고 요청이 86회로 가볍다. 매일
+#   포켓   — 상품이 드물게 늘고 요청이 260회로 무겁다. 주 1회
+
+name: 굿즈 수집
+
+on:
+  schedule:
+    # UTC 기준이다. 한국 시간은 +9 시간
+    - cron: '0 18 * * *' # 매일 03:00 KST — 공식몰
+    - cron: '0 19 * * 6' # 일요일 04:00 KST — 포켓
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 수집할 스토어
+        type: choice
+        options:
+          - both
+          - official
+          - pocket
+        default: both
+
+# 수집이 겹치면 같은 표에 동시에 쓰게 된다. 앞선 실행이 끝날 때까지 기다린다
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # 남의 상용 스토어다. 로컬(1초)보다 넉넉히 둔다
+      COLLECT_REQUEST_INTERVAL_MS: '2000'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # 어느 스토어를 받을지 정한다.
+      # 예약 실행은 어느 cron 이 깨웠는지로, 수동 실행은 고른 값으로 가른다
+      - name: 대상 결정
+        id: plan
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            targets="${{ inputs.targets }}"
+          elif [ "${{ github.event.schedule }}" = "0 19 * * 6" ]; then
+            targets="pocket"
+          else
+            targets="official"
+          fi
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          echo "이번에 받을 스토어: $targets"
+
+      - name: 공식몰 수집
+        if: steps.plan.outputs.targets != 'pocket'
+        run: npx tsx scripts/collect-items.ts
+
+      - name: 포켓 스토어 수집
+        if: steps.plan.outputs.targets != 'official'
+        run: npx tsx scripts/collect-pocket.ts
+
+      # 이번에 받은 수집본만 적재된다.
+      # 러너는 매번 새로 뜨므로 받지 않은 쪽은 파일 자체가 없고, 적재가 건너뛴다
+      - name: Supabase 적재
+        run: node --import tsx scripts/load-items.ts
+
+      # 수집이 몇 건을 가져왔는지 남긴다. 어느 날 갑자기 줄면 여기서 보인다
+      - name: 결과 요약
+        if: always()
+        run: |
+          {
+            echo "### 수집 결과"
+            echo ""
+            echo "| 수집본 | 건수 |"
+            echo "| --- | --- |"
+            for f in data/items.jsonl data/items-pocket.jsonl; do
+              if [ -f "$f" ]; then
+                echo "| \`$f\` | $(wc -l < "$f") |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
