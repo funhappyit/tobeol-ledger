@@ -10,7 +10,7 @@
  */
 
 import { SOURCES, calculatePurchase, formatKrw, formatPremium, type SourceCode } from '@lib/ledger/calc';
-import type { DexItem } from '@lib/items/view';
+import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { FxResponse } from '~~/server/api/fx.get';
 import type { Database } from '~/types/database.types';
 
@@ -140,7 +140,8 @@ const visibleCandidates = computed(() => {
     if (already.has(candidate.handle)) {
       return false;
     }
-    return term.length === 0 || candidate.search.includes(term);
+    // 여기 후보는 표시해 둔 굿즈뿐이라 많아야 수백 건이다. 그때그때 만들어도 된다
+    return term.length === 0 || buildSearchText(candidate).includes(term);
   });
 });
 

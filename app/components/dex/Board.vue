@@ -10,7 +10,7 @@
  */
 
 import { categoryName } from '@lib/items/labels';
-import type { DexItem } from '@lib/items/view';
+import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
 const props = defineProps<{ items: DexItem[] }>();
@@ -69,11 +69,26 @@ const categories = computed(() => {
 /** 포켓 굿즈가 섞여 있을 때만 스토어 필터를 띄운다 */
 const hasOtherStore = computed(() => props.items.some((item) => item.source === 'pocket'));
 
+/**
+ * 검색 대조용 글자를 미리 만들어 둔다.
+ * 목록이 바뀔 때만 다시 만든다. 글자를 칠 때마다 1만 건을 다시 훑지 않기 위한 것이다.
+ */
+const searchIndex = computed(() => {
+  const index = new Map<string, string>();
+
+  for (const item of props.items) {
+    index.set(item.handle, buildSearchText(item));
+  }
+
+  return index;
+});
+
 const visible = computed(() => {
   const needle = query.value.trim().toLowerCase();
+  const index = searchIndex.value;
 
   return props.items.filter((item) => {
-    if (needle.length > 0 && !item.search.includes(needle)) {
+    if (needle.length > 0 && !(index.get(item.handle) ?? '').includes(needle)) {
       return false;
     }
 

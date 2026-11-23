@@ -33,8 +33,14 @@ export interface DexItem {
    * `"source":"official"` 을 매 건에 실어 보내면 그것만으로 응답이 200KB 늘어난다.
    */
   source?: ItemSource;
-  /** 검색 대조용. 한국어명·일본어명·원본 태그를 소문자로 합쳐 둔 것 */
-  search: string;
+  /**
+   * 검색 대조용 태그. 원본 태그를 소문자로 이어 붙인 것.
+   *
+   * 이름과 handle 은 담지 않는다. 그 값들은 이 응답에 이미 들어 있어서
+   * 합쳐 두면 같은 글자가 두 번 실린다. 1만 건이면 그 중복만 2MB 였다.
+   * 검색할 때 이름·handle 과 합치는 일은 화면 쪽이 한 번만 하면 된다(buildSearchText).
+   */
+  tags: string;
 }
 
 export function toDexItem(item: CollectedItem): DexItem {
@@ -49,9 +55,20 @@ export function toDexItem(item: CollectedItem): DexItem {
     purchaseLimit: item.parsed.purchaseLimit,
     // undefined 인 키는 JSON 에 실리지 않는다. 공식몰 굿즈는 이 항목을 통째로 생략한다
     source: item.source === 'official' ? undefined : item.source,
-    search: [item.nameKo, item.nameJa, item.handle, ...item.tagsRaw]
-      .filter((value): value is string => typeof value === 'string')
-      .join(' ')
-      .toLowerCase(),
+    tags: item.tagsRaw.join(' ').toLowerCase(),
   };
+}
+
+/**
+ * 검색에 쓸 글자를 만든다.
+ *
+ * 화면에서 굿즈 목록을 받은 뒤 한 번만 만들어 두고 쓴다.
+ * 입력이 바뀔 때마다 만들면 1만 건을 매번 훑게 되고, 서버에서 만들어 보내면
+ * 이름과 handle 이 응답에 두 번 실린다. 받는 쪽에서 한 번 만드는 것이 양쪽을 피한다.
+ */
+export function buildSearchText(item: DexItem): string {
+  return [item.nameKo, item.nameJa, item.handle, item.tags]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ')
+    .toLowerCase();
 }

@@ -13,6 +13,13 @@ useHead({
 
 <template>
   <div class="flex min-h-full flex-col">
+    <!--
+      화면을 옮길 때 위쪽에 진행 막대를 띄운다.
+      도감은 굿즈 목록을 통째로 받고 나서야 그려지는데, 그동안 아무 표시가 없으면
+      누른 것이 먹히지 않은 것처럼 보인다. 받는 중이라는 사실만이라도 알린다.
+    -->
+    <NuxtLoadingIndicator color="var(--accent)" :height="3" />
+
     <SiteHeader />
     <NuxtPage />
   </div>
