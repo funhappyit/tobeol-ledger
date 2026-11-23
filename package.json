@@ -11,10 +11,13 @@
     "lint": "eslint app server src scripts",
     "collect": "tsx scripts/collect-items.ts",
     "collect:pocket": "tsx scripts/collect-pocket.ts",
+    "load": "node --import tsx --env-file=.env.local scripts/load-items.ts",
+    "check:schema": "node --import tsx --env-file=.env.local scripts/check-schema.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@nuxtjs/supabase": "^2.1.0",
+    "@supabase/supabase-js": "^2.119.2",
     "nuxt": "4.6.4",
     "vue": "3.5.45",
     "vue-router": "^5.5.1"
