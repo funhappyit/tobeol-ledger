@@ -36,7 +36,14 @@ const shipping = ref<number | null>(null);
 const fee = ref<number | null>(null);
 const memo = ref('');
 
-const fxRate = ref<number | null>(null);
+/**
+ * 화면에는 100엔 기준으로 보여 준다.
+ * 국내 은행·포털이 모두 100엔 단위로 고시해서, 1엔당 값(8.443)을 그대로 띄우면
+ * 사용자가 자기가 아는 환율과 맞춰 볼 수 없다.
+ * 계산과 저장은 1엔당 값으로 하므로 들어올 때와 나갈 때만 100 으로 나누고 곱한다.
+ */
+const fxPer100 = ref<number | null>(null);
+const fxRate = computed(() => (fxPer100.value === null ? null : fxPer100.value / 100));
 const fxDate = ref<string | null>(null);
 const fxTouched = ref(false);
 const fxLoading = ref(false);
@@ -53,11 +60,12 @@ async function loadRate(): Promise<void> {
   fxLoading.value = true;
   try {
     const result = await $fetch<FxResponse>('/api/fx', { query: { date: purchasedOn.value } });
-    fxRate.value = result.rate;
+    // 소수점이 길어지면 읽기 어렵다. 100엔 기준에서 둘째 자리면 충분하다
+    fxPer100.value = Math.round(result.rate * 100 * 100) / 100;
     fxDate.value = result.date;
   } catch {
     // 환율을 못 받아도 기록은 남길 수 있어야 한다. 직접 입력하게 둔다
-    fxRate.value = null;
+    fxPer100.value = null;
     fxDate.value = null;
   } finally {
     fxLoading.value = false;
@@ -225,7 +233,7 @@ async function save(): Promise<void> {
 
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium">
-            환율 (1엔당 원)
+            환율 (100엔당 원)
             <span v-if="fxLoading" class="ml-1 text-xs font-normal text-muted">불러오는 중...</span>
             <span v-else-if="fxDate && !fxTouched" class="ml-1 text-xs font-normal text-muted">
               {{ fxDate }} 고시 기준
@@ -233,16 +241,17 @@ async function save(): Promise<void> {
             <span v-else-if="fxTouched" class="ml-1 text-xs font-normal text-accent">직접 입력함</span>
           </span>
           <input
-            v-model.number="fxRate"
+            v-model.number="fxPer100"
             type="number"
-            step="0.0001"
+            step="0.01"
             min="0"
             inputmode="decimal"
             class="rounded-xl border border-border-soft bg-background px-3 py-2 text-sm outline-none focus:border-accent"
             @input="onFxInput"
           >
           <span class="text-xs text-muted">
-            은행 고시 기준이라 카드·대행 결제 환율과 차이가 납니다. 실제 적용 환율을 아시면 고쳐 주세요.
+            은행 앱에 뜨는 100엔 기준 숫자를 그대로 넣으시면 됩니다. 고시 환율이라 카드·대행
+            결제에 실제 적용된 값과는 차이가 납니다.
           </span>
         </label>
 

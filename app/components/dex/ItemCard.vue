@@ -132,8 +132,13 @@ const released = computed(() => {
         </button>
       </div>
 
-      <!-- 이 앱의 본체. 얼마에 샀는지 남겨야 플미가 계산된다 -->
+      <!--
+        토벌 완료로 표시한 것만 기록을 남길 수 있다.
+        손에 넣지 않은 굿즈의 지출을 적을 일은 없고,
+        1만 건 전부에 버튼을 달면 목록이 시끄러워진다.
+      -->
       <button
+        v-if="showOwned"
         type="button"
         class="mt-1 w-full rounded-lg border border-border-soft py-1.5 text-xs text-muted transition-colors hover:border-accent hover:text-foreground"
         @click="emit('record', item)"

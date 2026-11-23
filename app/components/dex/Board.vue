@@ -103,12 +103,7 @@ function openRecord(item: DexItem): void {
 }
 
 function onSaved(): void {
-  // 산 것이니 토벌 완료로도 표시해 준다. 따로 체크하게 두면 빠뜨리기 쉽다
-  const handle = recording.value?.handle;
-  if (handle && !owned.value.has(handle)) {
-    toggle('owned', handle);
-  }
-
+  // 토벌 완료로 표시한 굿즈에만 기록 버튼이 보이므로 여기서 따로 체크할 것이 없다
   recording.value = null;
   savedNotice.value = true;
   setTimeout(() => {
