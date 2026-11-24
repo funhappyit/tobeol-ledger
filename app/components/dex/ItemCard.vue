@@ -103,9 +103,14 @@ const released = computed(() => {
         >
           {{ store }}
         </span>
+        <!--
+          바탕을 고정색으로 둔다. 이 배지는 카드가 아니라 상품 사진 위에 얹히는데,
+          테마 토큰(foreground)을 쓰면 다크 모드에서 밝은 색이 되어
+          흰 배경 상품 사진 위에 흰 글씨를 올리는 꼴이 된다.
+        -->
         <span
           v-if="item.purchaseLimit"
-          class="rounded-full bg-foreground/70 px-2 py-0.5 text-xs text-white"
+          class="rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white shadow-sm"
         >
           1인 {{ item.purchaseLimit }}개
         </span>
