@@ -271,8 +271,12 @@ async function signOut(): Promise<void> {
 
 <template>
   <main class="mx-auto w-full max-w-md px-4 py-16 sm:px-6">
-    <h1 class="text-2xl font-bold tracking-tight">{{ isSignUp ? '회원가입' : '로그인' }}</h1>
-    <p class="mt-2 text-sm text-muted">
+    <!-- 로그인한 사람에게는 로그인 화면이 아니라 계정 화면이다 -->
+    <h1 class="text-2xl font-bold tracking-tight">
+      <template v-if="user">계정</template>
+      <template v-else>{{ isSignUp ? '회원가입' : '로그인' }}</template>
+    </h1>
+    <p v-if="!user" class="mt-2 text-sm text-muted">
       로그인하면 토벌 기록이 계정에 저장돼 다른 기기에서도 이어집니다. 지금까지 이 브라우저에
       체크해 둔 기록은 로그인할 때 함께 올라갑니다.
     </p>

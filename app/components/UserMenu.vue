@@ -28,7 +28,17 @@ async function signOut(): Promise<void> {
 <template>
   <div class="ml-auto flex items-center gap-2">
     <template v-if="user">
-      <span class="hidden text-sm text-muted sm:inline">{{ label }}</span>
+      <!--
+        계정명을 누르면 계정 화면으로 간다.
+        비밀번호를 거는 자리가 거기에 있는데, 주소를 직접 치지 않으면 닿을 길이 없었다.
+      -->
+      <NuxtLink
+        to="/login"
+        class="hidden text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline sm:inline"
+        title="계정 설정"
+      >
+        {{ label }}
+      </NuxtLink>
       <button
         type="button"
         class="rounded-full border border-border-soft px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground"
