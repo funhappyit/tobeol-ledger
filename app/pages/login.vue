@@ -28,12 +28,22 @@ const sent = ref(false);
 const signedUp = ref(false);
 const errorMessage = ref<string | null>(null);
 
+/** 비밀번호 재설정 */
+const resetSending = ref(false);
+const resetSent = ref(false);
+
+/** 로그인한 상태에서 비밀번호를 새로 거는 자리 */
+const newPassword = ref('');
+const updating = ref(false);
+const passwordUpdated = ref(false);
+
 const isSignUp = computed(() => mode.value === 'signup');
 
 // 길을 바꾸면 앞서 띄운 안내는 더 이상 맞지 않는다
 watch(mode, () => {
   sent.value = false;
   signedUp.value = false;
+  resetSent.value = false;
   errorMessage.value = null;
 });
 
@@ -180,6 +190,67 @@ async function signInWith(provider: 'google' | 'kakao'): Promise<void> {
   }
 }
 
+/**
+ * 비밀번호를 잊었을 때.
+ *
+ * 돌아올 주소를 재설정 전용 화면이 아니라 평소 콜백(/confirm)으로 둔다.
+ * Supabase 는 허용 목록에 없는 주소로는 돌려보내지 않으므로, 전용 화면을 두면
+ * 그 주소를 대시보드에 따로 등록해야 한다. 콜백을 거치면 그대로 로그인되고,
+ * 로그인한 자리에서 비밀번호를 새로 걸 수 있으니 결과는 같다.
+ */
+async function sendPasswordReset(): Promise<void> {
+  const address = email.value.trim();
+  if (address.length === 0 || resetSending.value) {
+    errorMessage.value = address.length === 0 ? '이메일을 먼저 적어 주세요.' : null;
+    return;
+  }
+
+  resetSending.value = true;
+  errorMessage.value = null;
+
+  const { error } = await client.auth.resetPasswordForEmail(address, {
+    redirectTo: callbackUrl(),
+  });
+
+  resetSending.value = false;
+
+  if (error) {
+    errorMessage.value = toKorean(error.message);
+    return;
+  }
+
+  resetSent.value = true;
+}
+
+/**
+ * 비밀번호를 새로 건다.
+ *
+ * 이미 로그인한 상태에서만 할 수 있다. 메일 링크로 들어와도 그 시점엔 로그인된 상태라
+ * 같은 길로 처리된다. 지금 비밀번호를 묻지 않는 이유는, 잊어서 들어온 사람이
+ * 대부분이고 로그인되어 있다는 것 자체가 본인 확인을 대신하기 때문이다.
+ */
+async function updatePassword(): Promise<void> {
+  if (newPassword.value.length < 6 || updating.value) {
+    return;
+  }
+
+  updating.value = true;
+  errorMessage.value = null;
+  passwordUpdated.value = false;
+
+  const { error } = await client.auth.updateUser({ password: newPassword.value });
+
+  updating.value = false;
+
+  if (error) {
+    errorMessage.value = toKorean(error.message);
+    return;
+  }
+
+  newPassword.value = '';
+  passwordUpdated.value = true;
+}
+
 async function signOut(): Promise<void> {
   await client.auth.signOut();
 }
@@ -216,6 +287,39 @@ async function signOut(): Promise<void> {
           로그아웃
         </button>
       </div>
+
+      <!--
+        비밀번호를 새로 거는 자리.
+        메일 링크로 들어온 사람도 이 시점엔 로그인된 상태라 같은 폼을 쓴다.
+      -->
+      <form class="mt-5 border-t border-border-soft pt-5" @submit.prevent="updatePassword">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium">비밀번호 설정</span>
+          <span class="text-xs text-muted">
+            비밀번호를 잊었거나 메일 링크로 들어오셨다면 여기서 새로 걸 수 있습니다.
+          </span>
+          <input
+            v-model="newPassword"
+            type="password"
+            minlength="6"
+            autocomplete="new-password"
+            placeholder="6자 이상"
+            class="mt-1 rounded-xl border border-border-soft bg-background px-4 py-2.5 text-sm outline-none focus:border-accent"
+          >
+        </label>
+
+        <button
+          type="submit"
+          :disabled="updating || newPassword.length < 6"
+          class="mt-3 w-full rounded-xl border border-border-soft px-4 py-2.5 text-sm font-medium transition-colors hover:border-accent disabled:opacity-50"
+        >
+          {{ updating ? '바꾸는 중...' : '이 비밀번호로 설정' }}
+        </button>
+
+        <p v-if="passwordUpdated" class="mt-3 rounded-xl border border-fair/40 bg-fair/10 px-4 py-3 text-sm text-fair">
+          비밀번호를 바꿨습니다. 다음부터는 이 비밀번호로 로그인하시면 됩니다.
+        </p>
+      </form>
     </div>
 
     <template v-else>
@@ -299,6 +403,25 @@ async function signOut(): Promise<void> {
         <template v-if="sending">보내는 중...</template>
         <template v-else>{{ isSignUp ? '비밀번호 없이 메일 링크로 시작하기' : '비밀번호 없이 메일 링크로 로그인' }}</template>
       </button>
+
+      <!-- 비밀번호를 잊었을 때. 가입 중에는 보여 줄 이유가 없다 -->
+      <button
+        v-if="!isSignUp"
+        type="button"
+        :disabled="resetSending"
+        class="mt-2 w-full text-center text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
+        @click="sendPasswordReset"
+      >
+        {{ resetSending ? '보내는 중...' : '비밀번호를 잊으셨나요?' }}
+      </button>
+
+      <p
+        v-if="resetSent"
+        class="mt-3 rounded-xl border border-fair/40 bg-fair/10 px-4 py-3 text-sm text-fair"
+      >
+        재설정 메일을 보냈습니다. 링크를 누르면 로그인되고, 그 뒤 이 화면에서
+        새 비밀번호를 설정하실 수 있습니다.
+      </p>
 
       <p v-if="sent" class="mt-3 rounded-xl border border-fair/40 bg-fair/10 px-4 py-3 text-sm text-fair">
         메일을 보냈습니다. 받은 편지함의 링크를 누르면 로그인됩니다.
