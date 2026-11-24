@@ -103,9 +103,13 @@ onUnmounted(() => {
 watch(
   user,
   (value) => {
-    if (value) {
-      router.replace('/dex');
+    if (!value) {
+      return;
     }
+
+    // 비밀번호 재설정으로 들어온 경우에는 도감이 아니라 비밀번호를 거는 화면으로 보낸다.
+    // 로그인만 시켜 놓고 도감으로 보내면 정작 바꾸러 온 자리를 찾지 못한다
+    router.replace(route.query.next === 'password' ? '/login?next=password' : '/dex');
   },
   { immediate: true },
 );

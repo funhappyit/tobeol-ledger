@@ -15,6 +15,17 @@ useHead({ title: '로그인' });
 const client = useSupabaseClient();
 const user = useSupabaseUser();
 const router = useRouter();
+const route = useRoute();
+
+/** 재설정 링크를 타고 들어왔는지. 그렇다면 비밀번호를 거는 자리로 바로 안내한다 */
+const askingForPassword = computed(() => route.query.next === 'password');
+const newPasswordInput = ref<HTMLInputElement | null>(null);
+
+onMounted(() => {
+  if (askingForPassword.value) {
+    newPasswordInput.value?.focus();
+  }
+});
 
 /** 같은 폼을 로그인과 회원가입이 나눠 쓴다. 입력 항목이 같아서 창을 따로 둘 이유가 없다 */
 type Mode = 'signin' | 'signup';
@@ -208,8 +219,10 @@ async function sendPasswordReset(): Promise<void> {
   resetSending.value = true;
   errorMessage.value = null;
 
+  // next 를 붙여 두면 콜백이 도감 대신 이 화면으로 돌려보낸다.
+  // 허용 목록 검사는 경로까지만 보므로 쿼리를 붙여도 등록한 주소 그대로다
   const { error } = await client.auth.resetPasswordForEmail(address, {
-    redirectTo: callbackUrl(),
+    redirectTo: `${callbackUrl()}?next=password`,
   });
 
   resetSending.value = false;
@@ -292,13 +305,22 @@ async function signOut(): Promise<void> {
         비밀번호를 새로 거는 자리.
         메일 링크로 들어온 사람도 이 시점엔 로그인된 상태라 같은 폼을 쓴다.
       -->
-      <form class="mt-5 border-t border-border-soft pt-5" @submit.prevent="updatePassword">
+      <form
+        class="mt-5 rounded-xl border-t pt-5 transition-colors"
+        :class="askingForPassword ? 'border-t-accent bg-accent/5 px-4 pb-4' : 'border-t-border-soft'"
+        @submit.prevent="updatePassword"
+      >
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium">비밀번호 설정</span>
           <span class="text-xs text-muted">
-            비밀번호를 잊었거나 메일 링크로 들어오셨다면 여기서 새로 걸 수 있습니다.
+            {{
+              askingForPassword
+                ? '로그인됐습니다. 쓰실 비밀번호를 적어 주세요.'
+                : '비밀번호를 잊었거나 메일 링크로 들어오셨다면 여기서 새로 걸 수 있습니다.'
+            }}
           </span>
           <input
+            ref="newPasswordInput"
             v-model="newPassword"
             type="password"
             minlength="6"
