@@ -29,7 +29,9 @@ export default defineNuxtConfig({
     '/confirm': { ssr: false },
 
     /**
-     * 누구에게나 같은 화면만 캐시한다.
+
+
+    '/': { isr: 300 }, 누구에게나 같은 화면만 캐시한다.
      *
      * 굿즈는 하루 한 번 수집해서 바뀌는데, 요청마다 DB 에서 1만 건을 받아오면
      * PostgREST 를 11번 불러야 한다. 5분 캐시를 두면 그 값을 한 번만 치르고,
@@ -42,6 +44,13 @@ export default defineNuxtConfig({
     '/': { isr: 300 },
     '/dex': { isr: 300 },
     '/dex/**': { isr: 300 },
+
+    /**
+     * 도감은 첫 120건만 먼저 받고 나머지를 화면에서 직접 받아 간다(dex/Screen.vue).
+     * 그 두 번째 요청은 페이지 캐시를 타지 않으므로 여기서 따로 캐시한다.
+     * 그냥 두면 Cache-Control: no-cache 가 붙어 방문자마다 수집본을 다시 읽는다.
+     */
+    '/api/dex': { swr: 300 },
   },
   devtools: { enabled: true },
 

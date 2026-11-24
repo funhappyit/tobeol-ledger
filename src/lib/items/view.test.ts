@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { CollectedItem } from '../collect/types';
-import { buildSearchText, toDexItem } from './view';
+import { buildSearchText, packDexItems, toDexItem, unpackDexItems } from './view';
 
 function sample(overrides: Partial<CollectedItem> = {}): CollectedItem {
   return {
@@ -117,5 +117,64 @@ describe('buildSearchText', () => {
 
     assert.ok(!text.includes('null'));
     assert.ok(text.includes('ちいかわクリニック'));
+  });
+});
+
+describe('packDexItems / unpackDexItems', () => {
+  const base = 'https://cdn.shopify.com/s/files/1/0626/7142/1681/files/';
+
+  it('같은 접두어는 한 번만 싣는다', () => {
+    const items = [
+      toDexItem(sample({ handle: 'a', imageUrl: `${base}a.jpg?v=1` })),
+      toDexItem(sample({ handle: 'b', imageUrl: `${base}b.jpg?v=2` })),
+    ];
+
+    const packed = packDexItems(items);
+
+    assert.deepEqual(packed.imageBases, [base]);
+    assert.deepEqual(packed.items[0]?.img, [0, 'a.jpg']);
+    assert.deepEqual(packed.items[1]?.img, [0, 'b.jpg']);
+  });
+
+  it('접두어가 다르면 따로 센다', () => {
+    const other = 'https://cdn.shopify.com/s/files/1/0808/1434/2465/files/';
+    const items = [
+      toDexItem(sample({ handle: 'a', imageUrl: `${base}a.jpg` })),
+      toDexItem(sample({ handle: 'b', imageUrl: `${other}b.jpg` })),
+    ];
+
+    const packed = packDexItems(items);
+
+    assert.equal(packed.imageBases.length, 2);
+    assert.deepEqual(packed.items[1]?.img, [1, 'b.jpg']);
+  });
+
+  it('되돌리면 원래 주소가 된다. 캐시 갱신용 쿼리는 떼고 돌아온다', () => {
+    const items = [toDexItem(sample({ imageUrl: `${base}a.jpg?v=1742359550` }))];
+
+    assert.deepEqual(unpackDexItems(packDexItems(items)), [{ ...items[0], imageUrl: `${base}a.jpg` }]);
+  });
+
+  it('이미지가 없는 굿즈는 그대로 둔다', () => {
+    const items = [toDexItem(sample({ imageUrl: null }))];
+    const packed = packDexItems(items);
+
+    assert.equal(packed.items[0]?.img, undefined);
+    assert.equal(unpackDexItems(packed)[0]?.imageUrl, null);
+  });
+
+  it('접두어 번호가 어긋나면 이미지를 비운다. 깨진 주소를 만들지 않는다', () => {
+    const restored = unpackDexItems({ imageBases: [], items: [{ ...toDexItem(sample()), imageUrl: undefined, img: [3, 'a.jpg'] } as never] });
+
+    assert.equal(restored[0]?.imageUrl, null);
+  });
+
+  it('이미지 말고 다른 항목은 건드리지 않는다', () => {
+    const item = toDexItem(sample());
+    const restored = unpackDexItems(packDexItems([item]))[0];
+
+    assert.equal(restored?.nameKo, item.nameKo);
+    assert.equal(restored?.listPriceJpy, item.listPriceJpy);
+    assert.deepEqual(restored?.categoryCodes, item.categoryCodes);
   });
 });

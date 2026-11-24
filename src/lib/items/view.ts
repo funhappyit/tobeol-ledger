@@ -72,3 +72,64 @@ export function buildSearchText(item: DexItem): string {
     .join(' ')
     .toLowerCase();
 }
+
+/**
+ * 전송용으로 줄인 굿즈.
+ *
+ * `imageUrl` 자리에 `[접두어 번호, 파일명]` 이 들어간다.
+ * 이미지 주소는 전체 응답의 28%를 차지하는데, 접두어가 다섯 가지뿐이라
+ * 같은 55자를 1만 번 넘게 싣고 있었다.
+ */
+export interface PackedDexItem extends Omit<DexItem, 'imageUrl'> {
+  img?: [number, string];
+}
+
+export interface PackedDexItems {
+  /** `img[0]` 이 가리키는 주소 앞부분. 마지막 `/` 까지 포함한다 */
+  imageBases: string[];
+  items: PackedDexItem[];
+}
+
+/**
+ * 이미지 주소를 접두어와 파일명으로 쪼갠다.
+ *
+ * `?v=1742359550` 은 Shopify 가 붙이는 캐시 갱신용 값이다.
+ * 떼고 받아도 같은 이미지가 같은 크기로 내려와서(확인함) 싣지 않는다.
+ * 크기 파라미터는 화면에서 붙인다(items/image.ts).
+ */
+export function packDexItems(items: DexItem[]): PackedDexItems {
+  const imageBases: string[] = [];
+  const indexByBase = new Map<string, number>();
+
+  const packed = items.map((item): PackedDexItem => {
+    const { imageUrl, ...rest } = item;
+
+    if (!imageUrl) {
+      return rest;
+    }
+
+    const url = imageUrl.split('?')[0] ?? imageUrl;
+    const cut = url.lastIndexOf('/') + 1;
+    const base = url.slice(0, cut);
+
+    let index = indexByBase.get(base);
+    if (index === undefined) {
+      index = imageBases.push(base) - 1;
+      indexByBase.set(base, index);
+    }
+
+    return { ...rest, img: [index, url.slice(cut)] };
+  });
+
+  return { imageBases, items: packed };
+}
+
+/** 쪼개 보낸 굿즈를 화면이 쓰는 모양으로 되돌린다 */
+export function unpackDexItems(packed: PackedDexItems): DexItem[] {
+  return packed.items.map((item): DexItem => {
+    const { img, ...rest } = item;
+    const base = img ? packed.imageBases[img[0]] : undefined;
+
+    return { ...rest, imageUrl: base === undefined || !img ? null : `${base}${img[1]}` };
+  });
+}

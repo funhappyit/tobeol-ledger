@@ -13,7 +13,16 @@ import { categoryName } from '@lib/items/labels';
 import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
-const props = defineProps<{ items: DexItem[] }>();
+const props = defineProps<{
+  items: DexItem[];
+  /**
+   * 나머지 굿즈를 아직 받는 중인지.
+   *
+   * 도감은 첫 120건만 먼저 받고 나머지는 화면이 그려진 뒤에 받는다(Screen.vue).
+   * 그 사이에 검색하면 받아 둔 만큼만 걸리므로, 모자란 상태라는 것을 밝혀 둔다.
+   */
+  indexing?: boolean;
+}>();
 
 /** 한 번에 그릴 카드 수 */
 const PAGE_SIZE = 120;
@@ -205,6 +214,9 @@ function pickCategory(code: string | null): void {
           placeholder="이름, 일본어, 태그로 찾기"
           class="w-full rounded-full border border-border-soft bg-background px-4 py-2 text-sm outline-none focus:border-accent"
         >
+        <span v-if="indexing" class="mt-1 block px-4 text-xs text-muted" aria-live="polite">
+          나머지 굿즈를 불러오는 중이에요. 지금은 {{ items.length.toLocaleString() }}개 안에서 찾아요
+        </span>
       </label>
 
       <ChipScroller class="min-w-0 flex-1">
