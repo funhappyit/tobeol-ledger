@@ -36,6 +36,7 @@ const REQUIRED_CURRENCY = 'JPY';
 const SOURCES: { source: ItemSource; file: string }[] = [
   { source: 'official', file: 'items.jsonl' },
   { source: 'pocket', file: 'items-pocket.jsonl' },
+  { source: 'mogumogu', file: 'items-mogumogu.jsonl' },
 ];
 
 const { values } = parseArgs({

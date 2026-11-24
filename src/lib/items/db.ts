@@ -81,9 +81,23 @@ interface ItemRow {
  * 받아오지 않은 컬럼은 null 로 둔다. 화면이 쓰지 않는 값이고,
  * 원본이 필요하면 수집본 파일이나 DB 를 직접 보면 된다.
  */
+/**
+ * DB 의 source 문자열을 출처로 바꾼다.
+ *
+ * 모르는 값은 'official' 로 둔다. 적재 쪽(0006 마이그레이션)의 체크 제약이
+ * 값을 제한하고 있지만, 스토어가 새로 늘어난 뒤 배포 순서가 어긋나면
+ * 읽는 쪽이 모르는 값을 만날 수 있다. 그때 목록이 비는 것보다 낫다.
+ */
+const KNOWN_SOURCES: ItemSource[] = ['official', 'pocket', 'mogumogu'];
+
+function toSource(value: string | null): ItemSource {
+  const found = KNOWN_SOURCES.find((source) => source === value);
+  return found ?? 'official';
+}
+
 function toCollectedItem(row: ItemRow): CollectedItem {
   return {
-    source: (row.source === 'pocket' ? 'pocket' : 'official') as ItemSource,
+    source: toSource(row.source),
     shopifyProductId: row.shopify_product_id,
     handle: row.handle,
     jan: null,

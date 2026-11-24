@@ -6,7 +6,13 @@
  */
 
 import type { ItemSource } from '../collect/types';
-import { CATEGORY_NAME_KEYWORDS, CATEGORY_TAGS, CHARACTER_TAGS } from '../collect/vocab';
+import {
+  CATEGORY_NAME_KEYWORDS,
+  CATEGORY_TAGS,
+  CHARACTER_TAGS,
+  MOGUMOGU_CATEGORY_TAGS,
+  MOGUMOGU_PRODUCT_TYPES,
+} from '../collect/vocab';
 
 function invert(source: Record<string, { code: string; nameKo: string }>): Map<string, string> {
   const result = new Map<string, string>();
@@ -22,16 +28,24 @@ function invert(source: Record<string, { code: string; nameKo: string }>): Map<s
 
 const CHARACTER_NAMES = invert(CHARACTER_TAGS);
 /**
- * 종류 이름은 두 어휘표를 합쳐 만든다.
- * 공식몰 태그(CATEGORY_TAGS)에만 있는 코드와, 포켓 스토어 상품명에서만 나오는
- * 코드(CATEGORY_NAME_KEYWORDS 의 `clear_file` 등)가 서로 다르기 때문이다.
+ * 종류 이름은 스토어별 어휘표를 모두 합쳐 만든다.
+ * 스토어마다 나오는 코드가 달라서 하나만 쓰면 필터 단추에 코드가 그대로 보인다.
+ *   공식몰 태그          CATEGORY_TAGS
+ *   포켓 스토어 상품명    CATEGORY_NAME_KEYWORDS (`clear_file` 등)
+ *   모구모구 태그·품목    MOGUMOGU_* (`magnet`, `japanese_goods` 등)
  */
-const CATEGORY_NAMES = invert({ ...CATEGORY_TAGS, ...CATEGORY_NAME_KEYWORDS });
+const CATEGORY_NAMES = invert({
+  ...CATEGORY_TAGS,
+  ...CATEGORY_NAME_KEYWORDS,
+  ...MOGUMOGU_CATEGORY_TAGS,
+  ...MOGUMOGU_PRODUCT_TYPES,
+});
 
 /** 스토어 이름. 도감 카드의 출처 배지에 쓴다 */
 const SOURCE_NAMES: Record<ItemSource, string> = {
   official: '공식몰',
   pocket: '포켓',
+  mogumogu: '모구모구',
 };
 
 /** 굿즈 출처의 표시 이름. 모르는 값이면 null */

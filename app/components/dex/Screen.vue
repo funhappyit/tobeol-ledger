@@ -10,6 +10,8 @@
  */
 
 import { ALL_CHARACTERS, characterTitle, dexTabs, minorCharacterNames, OTHER_CHARACTERS } from '@lib/items/dex';
+import { sourceName } from '@lib/items/labels';
+import type { ItemSource } from '@lib/collect/types';
 import type { DexResponse } from '~~/server/api/dex.get';
 
 const props = defineProps<{ character: string }>();
@@ -44,16 +46,35 @@ const percent = computed(() =>
 );
 
 /**
- * 지금 보고 있는 목록에 섞인 포켓 스토어 굿즈 수.
+ * 지금 보고 있는 목록에 섞인 다른 스토어 굿즈 수.
  * 전체 건수를 서버에서 받아 두지 않고 여기서 세는 이유는, 캐릭터로 거른 뒤의 수여야 하기 때문이다.
+ * 공식몰 굿즈는 응답에서 source 키를 빼기 때문에(items/view.ts) 세어지지 않는다.
  */
-const pocketCount = computed(() => items.value.filter((item) => item.source === 'pocket').length);
+const otherStoreCounts = computed(() => {
+  const counts = new Map<string, number>();
+
+  for (const item of items.value) {
+    if (item.source === undefined || item.source === 'official') {
+      continue;
+    }
+    counts.set(item.source, (counts.get(item.source) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].map(([source, count]) => ({
+    label: sourceName(source as ItemSource) ?? source,
+    count,
+  }));
+});
 
 /** "다른 친구들" 탭에서는 어떤 캐릭터가 묶여 있는지 알려 준다 */
 const subtitle = computed(() => {
   const total = items.value.length.toLocaleString();
   const mixed =
-    pocketCount.value > 0 ? ` · 포켓 스토어 ${pocketCount.value.toLocaleString()}개 포함` : '';
+    otherStoreCounts.value.length > 0
+      ? ` · ${otherStoreCounts.value
+          .map((store) => `${store.label} ${store.count.toLocaleString()}개`)
+          .join(', ')} 포함`
+      : '';
 
   if (props.character === OTHER_CHARACTERS) {
     return `전체 ${total}개${mixed} · ${minorCharacterNames().join(', ')}와 캐릭터 표기가 없는 굿즈`;

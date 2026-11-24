@@ -11,6 +11,7 @@
     "lint": "eslint app server src scripts",
     "collect": "tsx scripts/collect-items.ts",
     "collect:pocket": "tsx scripts/collect-pocket.ts",
+    "collect:mogumogu": "tsx scripts/collect-mogumogu.ts",
     "load": "node --import tsx --env-file=.env.local scripts/load-items.ts",
     "check:schema": "node --import tsx --env-file=.env.local scripts/check-schema.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""

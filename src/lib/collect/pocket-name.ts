@@ -23,6 +23,8 @@
  * 포함 관계가 있는 말은 신경 쓰지 않아도 된다. 긴 것부터 바꾸기 때문에
  * `ハンドタオル` 가 `タオル` 보다, `大きめトートバッグ` 가 `トートバッグ` 보다 먼저 걸린다.
  */
+import { createNameTranslator, hasJapanese } from './jp-name';
+
 const DICTIONARY: Record<string, string> = {
   // ── 시리즈
   ちいかわクリスマスマーケット: '치이카와 크리스마스 마켓',
@@ -145,56 +147,10 @@ const DICTIONARY: Record<string, string> = {
   みんな: '모두',
 };
 
-/** 긴 조각부터 바꾼다. 짧은 말이 긴 말의 일부를 먼저 집어가는 것을 막는다 */
-const KEYS_BY_LENGTH = Object.keys(DICTIONARY).sort((a, b) => b.length - a.length);
-
-/**
- * 조각 사이를 잇는 말.
- * `な`·`の` 는 수식을 잇는 조사라 한국어에서는 띄어쓰기로 충분하다.
- * `と`(나열)는 앞말에 붙여 써야 해서 따로 다룬다.
- */
-const PARTICLES: Record<string, string> = {
-  な: ' ',
-  の: ' ',
-  '・': '·',
-};
-
-/** 일본어 글자가 남아 있는지. 번역이 어디까지 됐는지 세는 데 쓴다 */
-export function hasJapanese(value: string): boolean {
-  return /[぀-ヿ一-鿿]/.test(value);
-}
-
 /**
  * 상품명을 한국어로 바꾼다.
  * 사전에 없는 말은 일본어로 남는다.
  */
-export function translatePocketName(name: string): string {
-  let out = name;
+export const translatePocketName = createNameTranslator(DICTIONARY);
 
-  for (const japanese of KEYS_BY_LENGTH) {
-    if (!out.includes(japanese)) {
-      continue;
-    }
-    // 앞뒤에 공백을 두어 조각끼리 붙지 않게 한다. 남는 공백은 마지막에 정리한다
-    out = out.split(japanese).join(` ${DICTIONARY[japanese]} `);
-  }
-
-  for (const [particle, replacement] of Object.entries(PARTICLES)) {
-    out = out.split(particle).join(replacement);
-  }
-
-  // `と` 는 "하치와레와 세 별"처럼 앞말에 붙는다. 사전 치환이 남긴 앞 공백을 함께 거둔다
-  out = out.replace(/\s*と\s*/g, '와 ');
-
-  return (
-    out
-      .replace(/（/g, ' (')
-      .replace(/）/g, ') ')
-      .replace(/\(\s+/g, '(')
-      .replace(/\s+\)/g, ')')
-      // 가운뎃점은 이름을 바로 잇는 기호라 양옆을 붙인다
-      .replace(/\s*·\s*/g, '·')
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
-}
+export { hasJapanese };

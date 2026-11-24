@@ -126,3 +126,160 @@ export const FLAG_TAGS: Record<string, string> = {
   予約: 'preorder',
   グループ: 'group',
 };
+
+// ---------------------------------------------------------------------------
+// 모구모구 본포 어휘
+//
+// 공식몰과 같은 Shopify 지만 붙이는 말이 다르다.
+//   - 분류 태그가 묶음 표기다: `がま口・ポーチ・巾着`, `タオル・てぬぐい`
+//   - 지역이 태그로 들어온다: `伏見稲荷`, `川越`, `小樽`
+//   - product_type 이 알차다(59종). 공식몰은 로케일마다 값이 달라 못 믿었지만
+//     이 스토어는 일본어 하나뿐이라 품목어가 그대로 들어 있어 종류 판정에 쓸 수 있다
+//
+// 지역·모티프 태그(`川越`, `おいも`, `和装`)는 어느 표에도 넣지 않는다.
+// 분류가 아니라서 rest 로 흘려보내는데, tagsRaw 에 원문이 남아 검색은 그대로 된다.
+// ---------------------------------------------------------------------------
+
+/** 모구모구에만 나오는 캐릭터 표기 */
+export const MOGUMOGU_CHARACTER_TAGS: Record<string, CharacterDef> = {
+  // 라멘집 차림의 요로이상. 같은 캐릭터라 코드를 공유한다
+  ラーメンの鎧さん: { code: 'yoroisan', nameKo: '요로이상' },
+};
+
+/**
+ * 모구모구 분류 태그 -> 종류.
+ * 묶음 표기는 대표 코드 하나로 모은다. 더 정확한 종류는 product_type 이 채운다
+ */
+export const MOGUMOGU_CATEGORY_TAGS: Record<string, CategoryDef> = {
+  ファッション小物: { code: 'fashion_accessory', nameKo: '패션소품' },
+  'ぬいぐるみ・マスコット': { code: 'plush', nameKo: '인형' },
+  'バッグ・ポーチ': { code: 'bag', nameKo: '가방' },
+  'がま口・ポーチ・巾着': { code: 'pouch', nameKo: '파우치' },
+  'シール・ステッカー': { code: 'sticker', nameKo: '스티커' },
+  'タオル・てぬぐい': { code: 'towel', nameKo: '타월' },
+  '箸・箸置き': { code: 'chopsticks', nameKo: '젓가락' },
+  // 가운뎃점이 반각인 변종이 1건 있다. 표기를 고치지 않고 둘 다 받는다
+  '箸･箸置き': { code: 'chopsticks', nameKo: '젓가락' },
+  '湯のみ・マグカップ': { code: 'kitchen', nameKo: '주방' },
+  Tシャツ: { code: 'tshirt_hoodie', nameKo: '티셔츠·후드' },
+  トートバッグ: { code: 'bag', nameKo: '가방' },
+  不織布バッグ: { code: 'bag', nameKo: '가방' },
+  クリアファイル: { code: 'clear_file', nameKo: '클리어파일' },
+  チャーム: { code: 'charm', nameKo: '참·장식' },
+  マグネット: { code: 'magnet', nameKo: '마그네트' },
+  バッジ: { code: 'badge', nameKo: '뱃지' },
+  ソックス: { code: 'socks', nameKo: '양말' },
+  マスキングテープ: { code: 'masking_tape', nameKo: '마스킹테이프' },
+  陶磁器: { code: 'kitchen', nameKo: '주방' },
+  豆皿: { code: 'kitchen', nameKo: '주방' },
+  ボールペン: { code: 'stationery', nameKo: '문구' },
+  爪切り: { code: 'goods', nameKo: '잡화' },
+  その他: { code: 'goods', nameKo: '잡화' },
+  // 부적·네츠케·노렌·보자기·부채·고슈인장은 하나하나가 5~19건이라
+  // 따로 세우면 필터가 산만해진다. 일본소품으로 묶는다
+  お守り: { code: 'japanese_goods', nameKo: '일본소품' },
+  ミニ根付: { code: 'japanese_goods', nameKo: '일본소품' },
+  のれん: { code: 'japanese_goods', nameKo: '일본소품' },
+  小風呂敷: { code: 'japanese_goods', nameKo: '일본소품' },
+  扇子: { code: 'japanese_goods', nameKo: '일본소품' },
+  御朱印帳: { code: 'japanese_goods', nameKo: '일본소품' },
+};
+
+/**
+ * 모구모구 product_type -> 종류.
+ *
+ * 태그보다 품목이 또렷해서 이쪽을 먼저 본다.
+ * 비어 있는 상품이 61건 있어 태그와 같이 써야 빈틈이 없다.
+ */
+export const MOGUMOGU_PRODUCT_TYPES: Record<string, CategoryDef> = {
+  // 의류
+  Tシャツ: { code: 'tshirt_hoodie', nameKo: '티셔츠·후드' },
+  パーカー: { code: 'tshirt_hoodie', nameKo: '티셔츠·후드' },
+  足袋ソックス: { code: 'socks', nameKo: '양말' },
+
+  // 키홀더·참·스탠드
+  キーホルダー: { code: 'keyholder', nameKo: '키홀더' },
+  ネックストラップ: { code: 'keyholder', nameKo: '키홀더' },
+  アクリルチャーム: { code: 'charm', nameKo: '참·장식' },
+  アクリルスタンド: { code: 'acrylic_stand', nameKo: '아크릴 스탠드' },
+
+  // 인형·마스코트
+  マスコット: { code: 'mascot', nameKo: '마스코트' },
+  ぬいぐるみ: { code: 'plush', nameKo: '인형' },
+
+  // 스티커·문구
+  ステッカー: { code: 'sticker', nameKo: '스티커' },
+  シール: { code: 'sticker', nameKo: '스티커' },
+  マスキングテープ: { code: 'masking_tape', nameKo: '마스킹테이프' },
+  クリアファイル: { code: 'clear_file', nameKo: '클리어파일' },
+  メモ帳: { code: 'memo', nameKo: '메모·떡메' },
+  ミニ色紙: { code: 'memo', nameKo: '메모·떡메' },
+  ボールペン: { code: 'stationery', nameKo: '문구' },
+
+  // 뱃지
+  ピンバッジ: { code: 'badge', nameKo: '뱃지' },
+  アクリルバッジ: { code: 'badge', nameKo: '뱃지' },
+  缶バッジ: { code: 'can_badge', nameKo: '캔뱃지' },
+
+  // 마그네트
+  マグネット: { code: 'magnet', nameKo: '마그네트' },
+  スクエアマグネット: { code: 'magnet', nameKo: '마그네트' },
+  提灯マグネット: { code: 'magnet', nameKo: '마그네트' },
+  'ミニフレーム マグネット': { code: 'magnet', nameKo: '마그네트' },
+  アクリルクリップマグネット: { code: 'magnet', nameKo: '마그네트' },
+
+  // 가방·파우치
+  トートバッグ: { code: 'bag', nameKo: '가방' },
+  エコバッグ: { code: 'bag', nameKo: '가방' },
+  ショルダーバッグ: { code: 'bag', nameKo: '가방' },
+  不織布バッグ: { code: 'bag', nameKo: '가방' },
+  巾着: { code: 'pouch', nameKo: '파우치' },
+  ポーチ: { code: 'pouch', nameKo: '파우치' },
+  小銭入れ: { code: 'pouch', nameKo: '파우치' },
+  印鑑入れ: { code: 'pouch', nameKo: '파우치' },
+  ティッシュケース: { code: 'case', nameKo: '케이스' },
+
+  // 타월
+  タオル: { code: 'towel', nameKo: '타월' },
+  フェイスタオル: { code: 'towel', nameKo: '타월' },
+  てぬぐい: { code: 'towel', nameKo: '타월' },
+  ハンドタオル: { code: 'hand_towel', nameKo: '손수건' },
+  ガーゼハンドタオル: { code: 'hand_towel', nameKo: '손수건' },
+
+  // 식기. 재질(도자기·유리)보다 쓰임으로 묶는다
+  マグカップ: { code: 'kitchen', nameKo: '주방' },
+  タンブラー: { code: 'kitchen', nameKo: '주방' },
+  ゆのみ: { code: 'kitchen', nameKo: '주방' },
+  茶碗: { code: 'kitchen', nameKo: '주방' },
+  豆皿: { code: 'kitchen', nameKo: '주방' },
+  箸: { code: 'chopsticks', nameKo: '젓가락' },
+  箸置き: { code: 'chopsticks', nameKo: '젓가락' },
+  カトラリー: { code: 'kitchen', nameKo: '주방' },
+  カトラリーセット: { code: 'kitchen', nameKo: '주방' },
+
+  // 일본소품
+  ミニお守り: { code: 'japanese_goods', nameKo: '일본소품' },
+  御朱印帳: { code: 'japanese_goods', nameKo: '일본소품' },
+  根付: { code: 'japanese_goods', nameKo: '일본소품' },
+  のれん: { code: 'japanese_goods', nameKo: '일본소품' },
+  小風呂敷: { code: 'japanese_goods', nameKo: '일본소품' },
+  扇子: { code: 'japanese_goods', nameKo: '일본소품' },
+
+  // 패션소품
+  ヘアゴム: { code: 'fashion_accessory', nameKo: '패션소품' },
+  パッチンピン: { code: 'fashion_accessory', nameKo: '패션소품' },
+
+  // 그 밖
+  フィギュア: { code: 'goods', nameKo: '잡화' },
+  キャラ撮りスティック: { code: 'goods', nameKo: '잡화' },
+  マルチクロス: { code: 'goods', nameKo: '잡화' },
+  爪切り: { code: 'goods', nameKo: '잡화' },
+};
+
+/** 모구모구 판매 형태 태그 -> 플래그 */
+export const MOGUMOGU_FLAG_TAGS: Record<string, string> = {
+  // 랜덤 봉입. 무엇이 나올지 모르고 사는 상품이다
+  トレーディング商品: 'trading',
+  // 특정 점포에서만 파는 상품
+  限定商品: 'store_limited',
+};

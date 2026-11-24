@@ -28,6 +28,7 @@ import { mergeItems, type ItemListResult } from './sort';
 const SOURCES: { path: string; source: ItemSource }[] = [
   { path: join(process.cwd(), 'data', 'items.jsonl'), source: 'official' },
   { path: join(process.cwd(), 'data', 'items-pocket.jsonl'), source: 'pocket' },
+  { path: join(process.cwd(), 'data', 'items-mogumogu.jsonl'), source: 'mogumogu' },
 ];
 
 export type { ItemListResult };

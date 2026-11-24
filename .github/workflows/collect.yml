@@ -8,8 +8,10 @@
 # 저장소에 커밋하면 15MB 짜리 파일이 매일 쌓여 저장소가 불어난다.
 #
 # 주기를 나눈 이유:
-#   공식몰 — 신상·재입고가 잦고 요청이 86회로 가볍다. 매일
-#   포켓   — 상품이 드물게 늘고 요청이 260회로 무겁다. 주 1회
+#   공식몰   — 신상·재입고가 잦고 요청이 86회로 가볍다. 매일
+#   포켓     — 상품이 드물게 늘고 요청이 260회로 무겁다. 주 1회
+#   모구모구 — 지역 한정몰이라 신상이 두 달에 한 번쯤 들어온다.
+#              요청은 3회뿐이라 가장 가볍지만 자주 받을 이유가 없다. 월 1회
 
 name: 굿즈 수집
 
@@ -18,16 +20,18 @@ on:
     # UTC 기준이다. 한국 시간은 +9 시간
     - cron: '0 18 * * *' # 매일 03:00 KST — 공식몰
     - cron: '0 19 * * 6' # 일요일 04:00 KST — 포켓
+    - cron: '0 20 1 * *' # 매월 1일 05:00 KST — 모구모구
   workflow_dispatch:
     inputs:
       targets:
         description: 수집할 스토어
         type: choice
         options:
-          - both
+          - all
           - official
           - pocket
-        default: both
+          - mogumogu
+        default: all
 
 # 수집이 겹치면 같은 표에 동시에 쓰게 된다. 앞선 실행이 끝날 때까지 기다린다
 concurrency:
@@ -62,21 +66,27 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             targets="${{ inputs.targets }}"
-          elif [ "${{ github.event.schedule }}" = "0 19 * * 6" ]; then
-            targets="pocket"
           else
-            targets="official"
+            case "${{ github.event.schedule }}" in
+              '0 19 * * 6') targets="pocket" ;;
+              '0 20 1 * *') targets="mogumogu" ;;
+              *)            targets="official" ;;
+            esac
           fi
           echo "targets=$targets" >> "$GITHUB_OUTPUT"
           echo "이번에 받을 스토어: $targets"
 
       - name: 공식몰 수집
-        if: steps.plan.outputs.targets != 'pocket'
+        if: steps.plan.outputs.targets == 'all' || steps.plan.outputs.targets == 'official'
         run: npx tsx scripts/collect-items.ts
 
       - name: 포켓 스토어 수집
-        if: steps.plan.outputs.targets != 'official'
+        if: steps.plan.outputs.targets == 'all' || steps.plan.outputs.targets == 'pocket'
         run: npx tsx scripts/collect-pocket.ts
+
+      - name: 모구모구 본포 수집
+        if: steps.plan.outputs.targets == 'all' || steps.plan.outputs.targets == 'mogumogu'
+        run: npx tsx scripts/collect-mogumogu.ts
 
       # 이번에 받은 수집본만 적재된다.
       # 러너는 매번 새로 뜨므로 받지 않은 쪽은 파일 자체가 없고, 적재가 건너뛴다
@@ -92,7 +102,7 @@ jobs:
             echo ""
             echo "| 수집본 | 건수 |"
             echo "| --- | --- |"
-            for f in data/items.jsonl data/items-pocket.jsonl; do
+            for f in data/items.jsonl data/items-pocket.jsonl data/items-mogumogu.jsonl; do
               if [ -f "$f" ]; then
                 echo "| \`$f\` | $(wc -l < "$f") |"
               fi

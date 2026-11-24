@@ -7,13 +7,15 @@
 /**
  * 굿즈를 어디서 수집했는지.
  *
- *   official — 치이카와 마켓(공식몰). Shopify 상품 JSON 을 받는다
- *   pocket   — 치이카와 포켓 굿즈 스토어. 상품 페이지의 JSON-LD 를 읽는다
+ *   official  — 치이카와 마켓(공식몰). Shopify 상품 JSON 을 받는다
+ *   pocket    — 치이카와 포켓 굿즈 스토어. 상품 페이지의 JSON-LD 를 읽는다
+ *   mogumogu  — 치이카와 모구모구 본포. 후시미·카와고에·오타루 지역 한정몰.
+ *               공식몰과 같은 Shopify 라 상품 JSON 을 그대로 받는다
  *
- * 두 스토어는 같은 굿즈를 팔지 않아서 중복 걱정이 없고, handle 형식도 겹치지 않는다
- * (공식몰은 JAN 코드 같은 숫자, 포켓은 32자 16진수).
+ * 세 스토어는 같은 굿즈를 팔지 않아서 중복 걱정이 없고, handle 형식도 겹치지 않는다
+ * (공식몰은 JAN 코드 같은 숫자, 포켓은 32자 16진수, 모구모구는 `chth-0089` 꼴 품번).
  */
-export type ItemSource = 'official' | 'pocket';
+export type ItemSource = 'official' | 'pocket' | 'mogumogu';
 
 /** Shopify 상품 JSON의 variant (필요한 필드만) */
 export interface ShopifyVariant {

@@ -35,12 +35,13 @@ const OWNED_FILTERS: { value: OwnedFilter; label: string }[] = [
  * 그쪽은 발매일을 공개하지 않아 발매일순 정렬에서 전부 맨 뒤로 가는데,
  * 전체가 1만 건이라 "더 보기"를 수십 번 눌러야 닿기 때문이다.
  */
-type SourceFilter = 'all' | 'official' | 'pocket';
+type SourceFilter = 'all' | 'official' | 'pocket' | 'mogumogu';
 
 const SOURCE_FILTERS: { value: SourceFilter; label: string }[] = [
   { value: 'all', label: '모든 스토어' },
   { value: 'official', label: '공식몰' },
   { value: 'pocket', label: '포켓 스토어' },
+  { value: 'mogumogu', label: '모구모구' },
 ];
 
 const query = ref('');
@@ -66,8 +67,13 @@ const categories = computed(() => {
     .sort((a, b) => b.count - a.count);
 });
 
-/** 포켓 굿즈가 섞여 있을 때만 스토어 필터를 띄운다 */
-const hasOtherStore = computed(() => props.items.some((item) => item.source === 'pocket'));
+/**
+ * 공식몰 말고 다른 스토어 굿즈가 섞여 있을 때만 스토어 필터를 띄운다.
+ * 공식몰 굿즈는 응답에서 source 키를 빼기 때문에(items/view.ts) undefined 다
+ */
+const hasOtherStore = computed(() =>
+  props.items.some((item) => item.source !== undefined && item.source !== 'official'),
+);
 
 /**
  * 검색 대조용 글자를 미리 만들어 둔다.
