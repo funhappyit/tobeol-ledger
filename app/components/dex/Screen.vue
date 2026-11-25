@@ -110,25 +110,21 @@ const percent = computed(() =>
 );
 
 /**
- * 지금 보고 있는 목록에 섞인 다른 스토어 굿즈 수.
- * 전체 건수를 서버에서 받아 두지 않고 여기서 세는 이유는, 캐릭터로 거른 뒤의 수여야 하기 때문이다.
- * 공식몰 굿즈는 응답에서 source 키를 빼기 때문에(items/view.ts) 세어지지 않는다.
+ * 지금 보고 있는 캐릭터에 섞인 다른 스토어 굿즈 수.
+ *
+ * 받아 둔 목록을 세지 않는다. 도감을 두 번에 나눠 받는데 첫 120건은 전부 공식몰이라,
+ * 세어 보면 처음에는 0이었다가 나머지가 도착할 때 글자가 바뀐다.
+ * 서버가 캐릭터로 거른 뒤 센 값을 쓴다.
  */
-const otherStoreCounts = computed(() => {
-  const counts = new Map<string, number>();
-
-  for (const item of items.value) {
-    if (item.source === undefined || item.source === 'official') {
-      continue;
-    }
-    counts.set(item.source, (counts.get(item.source) ?? 0) + 1);
-  }
-
-  return [...counts.entries()].map(([source, count]) => ({
-    label: sourceName(source as ItemSource) ?? source,
-    count,
-  }));
-});
+const otherStoreCounts = computed(() =>
+  Object.entries(data.value?.sourceCounts ?? {})
+    .filter(([source]) => source !== 'official')
+    .map(([source, count]) => ({
+      label: sourceName(source as ItemSource) ?? source,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count),
+);
 
 /** "다른 친구들" 탭에서는 어떤 캐릭터가 묶여 있는지 알려 준다 */
 const subtitle = computed(() => {
@@ -216,6 +212,7 @@ const subtitle = computed(() => {
         :items="items"
         :indexing="loadingRest"
         :stock-checked-at="data.stockCheckedAt"
+        :source-counts="data.sourceCounts"
       />
     </section>
 

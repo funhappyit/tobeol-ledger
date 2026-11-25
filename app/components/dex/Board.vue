@@ -24,6 +24,8 @@ const props = defineProps<{
   indexing?: boolean;
   /** 스토어별로 재고를 마지막으로 확인한 시각. "지금 토벌 가능" 안내에 쓴다 */
   stockCheckedAt?: Record<string, string>;
+  /** 이 캐릭터의 스토어별 건수. 스토어 필터를 띄울지 정하는 데 쓴다 */
+  sourceCounts?: Record<string, number>;
 }>();
 
 /** 한 번에 그릴 카드 수 */
@@ -90,10 +92,15 @@ const categories = computed(() => {
 
 /**
  * 공식몰 말고 다른 스토어 굿즈가 섞여 있을 때만 스토어 필터를 띄운다.
- * 공식몰 굿즈는 응답에서 source 키를 빼기 때문에(items/view.ts) undefined 다
+ *
+ * 받아 둔 목록을 훑지 않는다. 도감은 첫 120건만 먼저 받는데 그게 전부 공식몰이라
+ * (다른 스토어는 201번째에나 나온다) 필터가 숨었다가 나중에 끼어들어 칩이 밀린다.
+ * 서버가 센 값으로 판단하면 첫 화면부터 제자리에 있다.
  */
 const hasOtherStore = computed(() =>
-  props.items.some((item) => item.source !== undefined && item.source !== 'official'),
+  Object.entries(props.sourceCounts ?? {}).some(
+    ([source, count]) => source !== 'official' && count > 0,
+  ),
 );
 
 /**

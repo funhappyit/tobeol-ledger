@@ -28,6 +28,14 @@ export interface DexResponse {
   /** 거르기 전 전체 건수 */
   total: number;
   /**
+   * 지금 보고 있는 캐릭터의 스토어별 건수.
+   *
+   * 화면이 받아 둔 목록을 세지 않는 이유는 도감을 두 번에 나눠 받기 때문이다.
+   * 첫 120건은 발매일 최신순이라 전부 공식몰 굿즈다(다른 스토어는 201번째에나 나온다).
+   * 그걸 세면 첫 화면에서 스토어 필터가 숨었다가 나머지가 도착할 때 끼어들어 칩이 밀린다.
+   */
+  sourceCounts: Record<string, number>;
+  /**
    * 스토어별로 재고를 마지막으로 확인한 시각.
    *
    * 수집 주기가 스토어마다 달라서(공식몰 하루, 포켓 한 주, 모구모구 한 달)
@@ -35,6 +43,17 @@ export interface DexResponse {
    * 굿즈마다 싣지 않는 이유는 1만 건이면 그것만으로 응답이 수백 KB 늘기 때문이다.
    */
   stockCheckedAt: Record<string, string>;
+}
+
+/** 스토어별 건수를 센다 */
+function countByStore(items: { source: string }[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+
+  for (const item of items) {
+    counts[item.source] = (counts[item.source] ?? 0) + 1;
+  }
+
+  return counts;
 }
 
 /** 스토어별로 가장 최근 수집 시각을 고른다 */
@@ -89,6 +108,7 @@ export default defineEventHandler(async (event): Promise<DexResponse> => {
       counts: Object.fromEntries(countByCharacter(items)),
       currencies,
       total: items.length,
+      sourceCounts: {},
       stockCheckedAt: {},
     };
   }
@@ -103,6 +123,8 @@ export default defineEventHandler(async (event): Promise<DexResponse> => {
     counts: Object.fromEntries(countByCharacter(items)),
     currencies,
     total: items.length,
+    // 잘라내기 전에 센다. 화면이 쓰는 값은 이 캐릭터의 전체 건수다
+    sourceCounts: countByStore(picked),
     stockCheckedAt: latestByStore(items),
   };
 });
