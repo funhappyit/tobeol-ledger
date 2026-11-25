@@ -34,6 +34,14 @@ export interface DexItem {
    */
   source?: ItemSource;
   /**
+   * 수집 시점에 살 수 있었던 굿즈에만 들어 있다.
+   *
+   * 품절(false)과 모름(null)은 키를 통째로 생략한다.
+   * 공식몰 표본 750건 중 93%가 품절이라 그쪽을 실어 보내면 응답만 커지는데,
+   * 화면이 쓰는 것은 "아직 살 수 있다" 하나뿐이다.
+   */
+  inStock?: true;
+  /**
    * 검색 대조용 태그. 원본 태그를 소문자로 이어 붙인 것.
    *
    * 이름과 handle 은 담지 않는다. 그 값들은 이 응답에 이미 들어 있어서
@@ -55,6 +63,8 @@ export function toDexItem(item: CollectedItem): DexItem {
     purchaseLimit: item.parsed.purchaseLimit,
     // undefined 인 키는 JSON 에 실리지 않는다. 공식몰 굿즈는 이 항목을 통째로 생략한다
     source: item.source === 'official' ? undefined : item.source,
+    // true 일 때만 싣는다. 품절과 모름은 화면에서 쓰지 않는다
+    inStock: item.inStock === true ? true : undefined,
     tags: item.tagsRaw.join(' ').toLowerCase(),
   };
 }

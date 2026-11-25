@@ -27,6 +27,32 @@ export interface DexResponse {
   currencies: string[];
   /** 거르기 전 전체 건수 */
   total: number;
+  /**
+   * 스토어별로 재고를 마지막으로 확인한 시각.
+   *
+   * 수집 주기가 스토어마다 달라서(공식몰 하루, 포켓 한 주, 모구모구 한 달)
+   * "지금 살 수 있다"를 보장할 수 없다. 언제 본 값인지 화면에 함께 적으려고 보낸다.
+   * 굿즈마다 싣지 않는 이유는 1만 건이면 그것만으로 응답이 수백 KB 늘기 때문이다.
+   */
+  stockCheckedAt: Record<string, string>;
+}
+
+/** 스토어별로 가장 최근 수집 시각을 고른다 */
+function latestByStore(items: { source: string; collectedAt: string }[]): Record<string, string> {
+  const latest: Record<string, string> = {};
+
+  for (const item of items) {
+    if (item.collectedAt.length === 0) {
+      continue;
+    }
+
+    const current = latest[item.source];
+    if (current === undefined || item.collectedAt > current) {
+      latest[item.source] = item.collectedAt;
+    }
+  }
+
+  return latest;
 }
 
 /** 0 이상의 정수만 받는다. 그 밖의 값은 없는 것으로 친다 */
@@ -63,6 +89,7 @@ export default defineEventHandler(async (event): Promise<DexResponse> => {
       counts: Object.fromEntries(countByCharacter(items)),
       currencies,
       total: items.length,
+      stockCheckedAt: {},
     };
   }
 
@@ -76,5 +103,6 @@ export default defineEventHandler(async (event): Promise<DexResponse> => {
     counts: Object.fromEntries(countByCharacter(items)),
     currencies,
     total: items.length,
+    stockCheckedAt: latestByStore(items),
   };
 });

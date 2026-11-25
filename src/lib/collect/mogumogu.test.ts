@@ -234,3 +234,28 @@ describe('normalizeMogumoguProduct', () => {
     assert.equal(normalizeMogumoguProduct(sample({ title: '  ' }), 'JPY'), null);
   });
 });
+
+describe('모구모구 재고', () => {
+  it('살 수 있으면 true', () => {
+    const item = normalizeMogumoguProduct(
+      sample({ variants: [{ id: 1, title: 'Default', price: '2420', sku: 'CHGS-0186', available: true }] }),
+      'JPY',
+    );
+
+    assert.equal(item?.inStock, true);
+  });
+
+  it('품절이면 false', () => {
+    const item = normalizeMogumoguProduct(
+      sample({ variants: [{ id: 1, title: 'Default', price: '2420', sku: 'CHGS-0186', available: false }] }),
+      'JPY',
+    );
+
+    assert.equal(item?.inStock, false);
+  });
+
+  /** 재고를 안 내려주는 응답이면 품절이 아니라 모름이다 */
+  it('재고 표시가 없으면 null', () => {
+    assert.equal(normalizeMogumoguProduct(sample(), 'JPY')?.inStock, null);
+  });
+});

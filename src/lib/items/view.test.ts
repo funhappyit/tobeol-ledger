@@ -27,6 +27,7 @@ function sample(overrides: Partial<CollectedItem> = {}): CollectedItem {
     listPriceCurrency: 'JPY',
     imageUrl: 'https://cdn.shopify.com/s/files/1/a.jpg',
     sourceUrl: 'https://chiikawamarket.jp/products/4570189213295',
+    inStock: true,
     tagsRaw: ['20261127', 'ちいかわ', 'アパレル'],
     parsed: {
       releasedOn: '2026-11-27',
@@ -52,6 +53,7 @@ describe('toDexItem', () => {
       'categoryCodes',
       'handle',
       'imageUrl',
+      'inStock',
       'listPriceJpy',
       'nameJa',
       'nameKo',
@@ -178,3 +180,27 @@ describe('packDexItems / unpackDexItems', () => {
     assert.deepEqual(restored?.categoryCodes, item.categoryCodes);
   });
 });
+
+describe('재고', () => {
+  it('살 수 있는 굿즈만 inStock 을 싣는다', () => {
+    assert.equal(toDexItem(sample({ inStock: true })).inStock, true);
+  });
+
+  /**
+   * 품절이 열에 아홉이라 false 를 실으면 그것만으로 응답이 커진다.
+   * 화면이 쓰는 것은 "아직 살 수 있다" 하나뿐이다.
+   */
+  it('품절은 응답에 실리지 않는다', () => {
+    const item = toDexItem(sample({ inStock: false }));
+
+    assert.equal(item.inStock, undefined);
+    assert.ok(!JSON.stringify(item).includes('inStock'));
+  });
+
+  it('모르는 것도 실리지 않는다. 품절과 구분은 수집본에만 남는다', () => {
+    const item = toDexItem(sample({ inStock: null }));
+
+    assert.equal(item.inStock, undefined);
+    assert.ok(!JSON.stringify(item).includes('inStock'));
+  });
+})

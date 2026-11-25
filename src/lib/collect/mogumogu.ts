@@ -23,7 +23,7 @@
 
 import { fetchCatalogPage, MAX_PAGE_SIZE } from './catalog';
 import { toIsoDate, splitTags } from './parse-tags';
-import { pickImageUrl, pickListPriceJpy } from './product';
+import { pickImageUrl, pickInStock, pickListPriceJpy } from './product';
 import { translateMogumoguName } from './mogumogu-name';
 import {
   CATEGORY_TAGS,
@@ -203,6 +203,8 @@ export function normalizeMogumoguProduct(
     listPriceCurrency: currency,
     imageUrl: pickImageUrl(product),
     sourceUrl: `${origin}/products/${handle}`,
+    // 월 1회 수집이라 최대 한 달 묵은 값이다. 화면에서 언제 본 값인지 함께 밝힌다
+    inStock: pickInStock(product),
     tagsRaw,
     parsed: parseMogumoguTags(tagsRaw, product.product_type),
     updatedAt: product.updated_at,

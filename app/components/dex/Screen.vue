@@ -210,7 +210,13 @@ const subtitle = computed(() => {
         <pre class="mt-4 inline-block rounded-lg bg-background px-4 py-2 text-left text-sm">npx tsx scripts/collect-items.ts --interval 2000</pre>
       </div>
 
-      <DexBoard v-else class="mt-6" :items="items" :indexing="loadingRest" />
+      <DexBoard
+        v-else
+        class="mt-6"
+        :items="items"
+        :indexing="loadingRest"
+        :stock-checked-at="data.stockCheckedAt"
+      />
     </section>
 
     <footer class="mt-8 px-1 text-xs text-muted">

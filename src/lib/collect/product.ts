@@ -76,6 +76,25 @@ export function pickListPriceJpy(product: ShopifyProduct): number | null {
 }
 
 /** 대표 이미지. position 이 가장 앞선 것 */
+/**
+ * 수집 시점에 살 수 있었는지.
+ *
+ * 품목(variant)이 여럿이면 하나라도 살 수 있을 때 true 로 본다.
+ * 색이 네 가지인 티셔츠에서 한 색만 남아도 그 굿즈는 아직 토벌할 수 있기 때문이다.
+ *
+ * 품목이 없거나 `available` 을 안 내려주는 스토어면 null 이다.
+ * null 은 품절이 아니라 "알 수 없음"이다(types.ts 참고).
+ */
+export function pickInStock(product: ShopifyProduct): boolean | null {
+  const known = product.variants.filter((variant) => typeof variant.available === 'boolean');
+
+  if (known.length === 0) {
+    return null;
+  }
+
+  return known.some((variant) => variant.available === true);
+}
+
 export function pickImageUrl(product: ShopifyProduct): string | null {
   if (!product.images || product.images.length === 0) {
     return null;
@@ -131,6 +150,7 @@ export function normalizeProduct(
     listPriceCurrency: currency,
     imageUrl: pickImageUrl(primary),
     sourceUrl: `${origin}/products/${primary.handle}`,
+    inStock: pickInStock(primary),
     tagsRaw,
     parsed: parseTags(tagsRaw),
     updatedAt: primary.updated_at,

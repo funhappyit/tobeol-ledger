@@ -35,6 +35,7 @@ const COLUMNS = [
   'list_price_jpy',
   'image_url',
   'source_url',
+  'in_stock',
   'tags_raw',
   'released_on',
   'preorder_on',
@@ -63,6 +64,7 @@ interface ItemRow {
   list_price_jpy: number | null;
   image_url: string | null;
   source_url: string;
+  in_stock: boolean | null;
   tags_raw: string[] | null;
   released_on: string | null;
   preorder_on: string | null;
@@ -111,6 +113,8 @@ function toCollectedItem(row: ItemRow): CollectedItem {
     listPriceCurrency: row.list_price_jpy === null ? null : CURRENCY,
     imageUrl: row.image_url,
     sourceUrl: row.source_url,
+    // 아직 확인하지 않은 굿즈도 null 이다. 품절과 섞지 않는다
+    inStock: row.in_stock ?? null,
     tagsRaw: row.tags_raw ?? [],
     parsed: {
       releasedOn: row.released_on,

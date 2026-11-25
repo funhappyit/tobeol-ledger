@@ -9,7 +9,7 @@
  * 전부 그리면 조건을 바꿀 때마다 화면이 멎는다. 끊어서 그리고 "더 보기"로 이어 붙인다.
  */
 
-import { categoryName } from '@lib/items/labels';
+import { categoryName, sourceName } from '@lib/items/labels';
 import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -22,6 +22,8 @@ const props = defineProps<{
    * 그 사이에 검색하면 받아 둔 만큼만 걸리므로, 모자란 상태라는 것을 밝혀 둔다.
    */
   indexing?: boolean;
+  /** 스토어별로 재고를 마지막으로 확인한 시각. "지금 토벌 가능" 안내에 쓴다 */
+  stockCheckedAt?: Record<string, string>;
 }>();
 
 /** 한 번에 그릴 카드 수 */
@@ -57,6 +59,16 @@ const query = ref('');
 const category = ref<string | null>(null);
 const ownedFilter = ref<OwnedFilter>('all');
 const sourceFilter = ref<SourceFilter>('all');
+
+/**
+ * 아직 살 수 있는 굿즈만 보기.
+ *
+ * 품절 배지를 달지 않고 이쪽으로 가는 이유는 비율 때문이다.
+ * 공식몰 표본 750건 중 93%가 품절이라, 품절을 칠하면 거의 모든 카드가 칠해져
+ * 아무것도 가리키지 못한다. 나머지 7%를 드러내는 편이 쓸모 있다.
+ */
+const inStockOnly = ref(false);
+
 const shown = ref(PAGE_SIZE);
 
 const { owned, wish, ready, toggle } = useMarks();
@@ -116,6 +128,11 @@ const visible = computed(() => {
       return false;
     }
 
+    // 살 수 있었던 굿즈에만 inStock 이 실린다. 품절과 모름은 둘 다 키가 없다
+    if (inStockOnly.value && item.inStock !== true) {
+      return false;
+    }
+
     // 기록을 읽기 전에는 거르지 않는다. 안 그러면 첫 렌더에서 전부 사라진다
     if (!ready.value || ownedFilter.value === 'all') {
       return true;
@@ -134,8 +151,41 @@ const rendered = computed(() => visible.value.slice(0, shown.value));
 const remaining = computed(() => visible.value.length - rendered.value.length);
 
 // 조건이 바뀌면 처음부터 다시 그린다
-watch([query, category, ownedFilter, sourceFilter], () => {
+watch([query, category, ownedFilter, sourceFilter, inStockOnly], () => {
   shown.value = PAGE_SIZE;
+});
+
+/**
+ * 재고를 언제 본 값인지.
+ *
+ * 공식몰은 하루, 포켓은 한 주, 모구모구는 한 달 주기로 수집한다.
+ * "지금 살 수 있다"를 보장할 수 없으므로 언제 본 값인지 함께 밝힌다.
+ * 포켓은 재고를 확인할 길이 없어 여기에도, 필터 결과에도 나오지 않는다.
+ */
+const stockNotice = computed(() => {
+  const seen = props.stockCheckedAt ?? {};
+
+  // 재고를 확인할 수 있는 스토어만. 포켓은 값 자체가 없다
+  const parts = (['official', 'mogumogu'] as const).flatMap((source) => {
+    const at = seen[source];
+    if (at === undefined) {
+      return [];
+    }
+
+    const date = new Date(at);
+    if (Number.isNaN(date.getTime())) {
+      return [];
+    }
+
+    const when = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}시`;
+    return [`${sourceName(source) ?? source} ${when}`];
+  });
+
+  if (parts.length === 0) {
+    return '재고는 수집한 시점의 값이라 지금과 다를 수 있어요';
+  }
+
+  return `${parts.join(' · ')} 기준이에요. 포켓 스토어는 재고를 알 수 없어 빠져요`;
 });
 
 function onToggle(kind: MarkKind, handle: string): void {
@@ -255,8 +305,28 @@ function pickCategory(code: string | null): void {
             {{ filter.label }}
           </button>
         </template>
+
+        <!--
+          재고 필터. 품절이 열에 아홉이라 품절을 칠하는 대신 살 수 있는 쪽을 드러낸다
+        -->
+        <span class="mx-1 h-6 w-px shrink-0 self-center bg-border-soft" aria-hidden="true" />
+        <button
+          type="button"
+          :aria-pressed="inStockOnly"
+          class="shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors"
+          :class="
+            inStockOnly
+              ? 'border-accent bg-accent text-white'
+              : 'border-border-soft text-muted hover:text-foreground'
+          "
+          @click="inStockOnly = !inStockOnly"
+        >
+          지금 토벌 가능
+        </button>
       </ChipScroller>
     </div>
+
+    <p v-if="inStockOnly" class="px-1 text-xs text-muted">{{ stockNotice }}</p>
 
     <p
       v-if="visible.length === 0"

@@ -429,6 +429,10 @@ export function normalizePocketItem(
     listPriceCurrency: pickCurrency(ld),
     imageUrl,
     sourceUrl: sourceUrl ?? `${origin}/products/${handle}/`,
+    // 재고를 확인할 길이 없다. 상품 페이지의 구조화 데이터(schema.org Product)에
+    // availability 가 들어 있지 않고, 재고를 그리는 /api/ 는 robots.txt 가 막고 있다.
+    // 모르는 것을 품절로 적으면 거짓이 되므로 null 로 둔다
+    inStock: null,
     // 이 스토어는 태그를 제공하지 않는다. 빈 배열인 것이 정상이다
     tagsRaw: [],
     parsed,

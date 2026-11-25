@@ -53,7 +53,14 @@ async function readJsonl(path: string, fallbackSource: ItemSource): Promise<Coll
 
     try {
       const item = JSON.parse(trimmed) as CollectedItem;
-      items.push(item.source ? item : { ...item, source: fallbackSource });
+
+      items.push({
+        ...item,
+        source: item.source ?? fallbackSource,
+        // 재고를 담기 전에 받아 둔 수집본에는 이 값이 없다.
+        // 없으면 "모름"이다. 품절로 적으면 없는 사실을 지어내는 것이 된다
+        inStock: item.inStock ?? null,
+      });
     } catch {
       // 수집이 중간에 끊겨 깨진 줄은 건너뛴다
     }

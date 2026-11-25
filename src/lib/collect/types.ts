@@ -104,6 +104,17 @@ export interface CollectedItem {
   listPriceCurrency: string | null;
   imageUrl: string | null;
   sourceUrl: string;
+  /**
+   * 수집 시점에 살 수 있었는지.
+   *
+   * `null` 은 "품절"이 아니라 "알 수 없음"이다. 포켓 스토어가 그렇다.
+   * 그쪽은 상품 페이지의 구조화 데이터에 재고 표시가 없어서 확인할 길이 없는데,
+   * 모르는 것을 품절로 적으면 거짓이 된다.
+   *
+   * 언제 본 값인지는 `collectedAt` 이 말해 준다. 수집 주기가 스토어마다 달라서
+   * (공식몰 하루, 포켓 한 주, 모구모구 한 달) 이 값만으로 "지금"을 말할 수는 없다.
+   */
+  inStock: boolean | null;
   /** 태그 원문. 분류 규칙이 바뀌어도 재수집 없이 다시 해석할 수 있도록 통째로 보관한다 */
   tagsRaw: string[];
   parsed: ParsedTags;

@@ -81,6 +81,8 @@ interface LoadRow {
   list_price_jpy: number | null;
   image_url: string | null;
   source_url: string;
+  /** null 은 품절이 아니라 확인하지 못했다는 뜻 */
+  in_stock: boolean | null;
   released_on: string | null;
   preorder_on: string | null;
   purchase_limit: number | null;
@@ -108,6 +110,7 @@ function toRow(item: CollectedItem, fallbackSource: ItemSource): LoadRow {
     list_price_jpy: item.listPriceJpy,
     image_url: item.imageUrl,
     source_url: item.sourceUrl,
+    in_stock: item.inStock,
     released_on: item.parsed.releasedOn,
     preorder_on: item.parsed.preorderOn,
     purchase_limit: item.parsed.purchaseLimit,
