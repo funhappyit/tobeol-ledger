@@ -23,6 +23,7 @@ import { parseArgs } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
 
 import type { ItemSource } from '../src/lib/collect/types';
+import { callWithRetry } from '../src/lib/supabase/retry';
 
 /** 한 번에 넘길 건수. 한 줄이 작아서 전체 적재보다 크게 잡는다 */
 const BATCH_SIZE = 2000;
@@ -147,13 +148,16 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const { data, error } = await supabase!.rpc('load_stock', { payload: batch });
+    /**
+     * 30분마다 도는 경로다. 여기서 한 번 죽으면 30분마다 죽는다.
+     * load_stock 은 UPDATE 라 같은 배치를 두 번 보내도 결과가 같다.
+     */
+    const result = await callWithRetry<LoadResult>(`${nth}번째 배치`, () => supabase!.rpc('load_stock', { payload: batch }), {
+      onRetry: ({ attempt, waitMs, message }) => {
+        console.log(`  ${nth}/${batches} — ${attempt}번째 재시도 (${waitMs}ms 뒤): ${message}`);
+      },
+    });
 
-    if (error) {
-      throw new Error(`${nth}번째 배치 실패: ${error.message}`);
-    }
-
-    const result = data as unknown as LoadResult;
     touched += result.touched;
     changed += result.changed;
 

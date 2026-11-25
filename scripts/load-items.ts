@@ -22,6 +22,7 @@ import { parseArgs } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
 
 import type { CollectedItem, ItemSource } from '../src/lib/collect/types';
+import { callWithRetry } from '../src/lib/supabase/retry';
 
 /**
  * 한 번에 넘길 건수.
@@ -216,13 +217,24 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const { data, error } = await supabase!.rpc('load_items', { payload: batch });
+      /**
+       * 한 배치가 삐끗했다고 나머지를 버리지 않는다.
+       * load_items 는 handle 기준 upsert 라 같은 배치를 두 번 보내도 결과가 같다.
+       * 2026-11-25 에 15번째 배치가 statement timeout 으로 죽어 8배치가 날아갔다.
+       */
+      const result = await callWithRetry<LoadResult>(
+        `[${target.source}] ${nth}번째 배치`,
+        () => supabase!.rpc('load_items', { payload: batch }),
+        {
+          onRetry: ({ attempt, waitMs, message }) => {
+            // 조용히 넘어가면 DB 가 느려지는 것을 모르고 지나간다
+            console.log(
+              `  ${nth}/${batches} — ${attempt}번째 재시도 (${waitMs}ms 뒤): ${message}`,
+            );
+          },
+        },
+      );
 
-      if (error) {
-        throw new Error(`[${target.source}] ${nth}번째 배치 실패: ${error.message}`);
-      }
-
-      const result = data as unknown as LoadResult;
       touched += result.touched;
       priceRows += result.price_rows;
 
