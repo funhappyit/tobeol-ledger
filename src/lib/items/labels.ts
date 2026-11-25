@@ -107,11 +107,37 @@ export function formatDate(value: string | null): string | null {
 }
 
 /**
- * 재고를 언제 본 값인지. `11/25 10시` 꼴.
+ * 재고를 언제 본 값인지. `11/25 16:13` 꼴.
  *
  * 도감 필터 안내와 카드 알약이 같은 글자를 써야 해서 한곳에 둔다.
- * 수집 주기가 하루~한 달이라 "지금"이라고 말할 수 없으니, 언제 본 값인지 늘 함께 밝힌다.
+ * 수집 주기가 30분~한 달이라 "지금"이라고 말할 수 없으니, 언제 본 값인지 늘 함께 밝힌다.
+ *
+ * ── 시간대를 한국으로 못박는 이유
+ *
+ * 예전에는 `date.getHours()` 를 썼다. 그 값은 코드가 도는 기계의 시간대를 따른다.
+ * Vercel 은 UTC 로 돌아서, 서버가 렌더한 /dex 에는 `11/25 7시` 가 박히고
+ * 브라우저는 같은 자리를 `11/25 16시` 로 다시 그렸다. 하이드레이션에서 9시간이 튀었다.
+ *
+ * 한국어 도감이라 한국 시각으로 읽는 것이 맞고, 무엇보다 서버와 브라우저가
+ * 같은 글자를 내야 한다. 그래서 Asia/Seoul 로 고정한다.
+ *
+ * ── 분까지 적는 이유
+ *
+ * 공식몰 재고를 30분마다 받는다. `시` 단위로 적으면 16:13 과 16:43 이 똑같이
+ * `16시` 가 되어, 30분 주기로 만든 의미가 글자에서 사라진다.
+ *
+ * hourCycle 을 h23 으로 못박는다. 이것을 두지 않으면 엔진에 따라 자정이
+ * `24:00` 으로 나온다.
  */
+const CHECKED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Seoul',
+  month: 'numeric',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
 export function formatCheckedAt(value: string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -122,5 +148,11 @@ export function formatCheckedAt(value: string | null | undefined): string | null
     return null;
   }
 
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}시`;
+  const parts: Record<string, string> = {};
+  for (const part of CHECKED_AT_FORMAT.formatToParts(date)) {
+    parts[part.type] = part.value;
+  }
+
+  // 월·일은 앞의 0 을 떼고, 시·분은 두 자리로 둔다. `11/25 16:13`
+  return `${Number(parts.month)}/${Number(parts.day)} ${parts.hour}:${parts.minute}`;
 }

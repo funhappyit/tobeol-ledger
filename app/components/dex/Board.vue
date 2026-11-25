@@ -187,27 +187,47 @@ watch([query, category, ownedFilter, sourceFilter, inStockOnly], () => {
 });
 
 /**
- * 재고를 언제 본 값인지.
+ * 재고를 마지막으로 가져온 시각. 늘 보이는 한 줄.
  *
- * 공식몰은 하루, 포켓은 한 주, 모구모구는 한 달 주기로 수집한다.
- * "지금 살 수 있다"를 보장할 수 없으므로 언제 본 값인지 함께 밝힌다.
+ * "지금 살 수 있다"를 보장할 수 없으니 언제 본 값인지 밝힌다.
+ * 예전에는 "지금 토벌 가능" 필터를 켰을 때만 보였고, 카드 쪽은 hover tooltip 이라
+ * 휴대폰에서는 볼 방법이 아예 없었다.
+ *
+ * 공식몰·모구모구를 30분마다 같이 받으므로 보통 두 시각이 같다. 같으면 한 번만 적는다.
+ * 모구모구만 월 1회 따로 받는 달이 있어서, 어긋나면 나란히 적어 둘 다 드러낸다.
+ *
  * 포켓은 재고를 확인할 길이 없어 여기에도, 필터 결과에도 나오지 않는다.
+ *
+ * 상대 시간("7분 전")은 쓰지 않는다. /dex 가 ISR 로 5분 캐시되므로 서버가 그린
+ * "방금"이 이미 5분 묵은 글자일 수 있다. 절대 시각은 그런 거짓말을 하지 않는다.
  */
-const stockNotice = computed(() => {
+const stockCheckedLine = computed(() => {
   const seen = props.stockCheckedAt ?? {};
 
   // 재고를 확인할 수 있는 스토어만. 포켓은 값 자체가 없다
   const parts = (['official', 'mogumogu'] as const).flatMap((source) => {
     const when = formatCheckedAt(seen[source]);
-    return when === null ? [] : [`${storeName(source)} ${when}`];
+    return when === null ? [] : [{ source, when }];
   });
 
   if (parts.length === 0) {
     return '재고는 수집한 시점의 값이라 지금과 다를 수 있어요';
   }
 
-  return `${parts.join(' · ')} 기준이에요. 포켓 스토어는 재고를 알 수 없어 빠져요`;
+  const whens = [...new Set(parts.map((part) => part.when))];
+  if (whens.length === 1) {
+    return `재고 ${whens[0]} 기준`;
+  }
+
+  const detail = parts.map((part) => `${storeName(part.source)} ${part.when}`).join(' · ');
+  return `재고 기준 — ${detail}`;
 });
+
+/**
+ * "지금 토벌 가능" 필터를 켰을 때만 덧붙이는 말.
+ * 기준 시각은 위 줄이 이미 말하고 있으니 여기서는 빠지는 스토어만 밝힌다.
+ */
+const stockFilterNotice = '포켓 스토어는 재고를 알 수 없어 이 목록에서 빠져요';
 
 function onToggle(kind: MarkKind, handle: string): void {
   toggle(kind, handle);
@@ -352,7 +372,9 @@ function pickCategory(code: string | null): void {
       </ChipScroller>
     </div>
 
-    <p v-if="inStockOnly" class="px-1 text-xs text-muted">{{ stockNotice }}</p>
+    <p class="px-1 text-xs text-muted">{{ stockCheckedLine }}</p>
+
+    <p v-if="inStockOnly" class="px-1 text-xs text-muted">{{ stockFilterNotice }}</p>
 
     <p
       v-if="visible.length === 0"
