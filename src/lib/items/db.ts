@@ -44,6 +44,7 @@ const COLUMNS = [
   'flags',
   'source_updated_at',
   'last_synced_at',
+  'stock_checked_at',
   'item_characters(character_code)',
   'item_categories(category_code)',
 ].join(', ');
@@ -73,6 +74,7 @@ interface ItemRow {
   flags: string[] | null;
   source_updated_at: string | null;
   last_synced_at: string | null;
+  stock_checked_at: string | null;
   item_characters: { character_code: string }[] | null;
   item_categories: { category_code: string }[] | null;
 }
@@ -95,6 +97,51 @@ const KNOWN_SOURCES: ItemSource[] = ['official', 'pocket', 'mogumogu'];
 function toSource(value: string | null): ItemSource {
   const found = KNOWN_SOURCES.find((source) => source === value);
   return found ?? 'official';
+}
+
+/**
+ * 재고를 마지막으로 확인한 시각.
+ *
+ * 두 가지 수집이 재고를 본다.
+ *   전체 수집   — 이름·가격까지 다시 받는다. last_synced_at 에 찍힌다
+ *   재고 스윕   — 재고만 다시 본다. stock_checked_at 에 찍힌다 (0008 마이그레이션)
+ *
+ * 둘 중 늦은 쪽이 답이다. 재고 스윕이 아직 한 번도 돌지 않은 행은
+ * stock_checked_at 이 null 이라 전체 수집 시각이 그대로 쓰인다.
+ *
+ * 문자열 비교로 고르지 않는다. PostgREST 가 돌려주는 시각의 오프셋이
+ * 늘 같다는 보장이 없고(`+00:00` / `+09:00`), 다르면 글자 순서가 시간 순서와 어긋난다.
+ */
+export function pickStockCheckedAt(
+  stockCheckedAt: string | null,
+  lastSyncedAt: string | null,
+): string {
+  const candidates = [stockCheckedAt, lastSyncedAt].filter(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
+
+  if (candidates.length === 0) {
+    return '';
+  }
+
+  let best = '';
+  let bestAt = -Infinity;
+
+  for (const value of candidates) {
+    const at = Date.parse(value);
+
+    // 읽을 수 없는 값이면 건너뛴다. 없는 시각을 지어내지 않는다
+    if (!Number.isFinite(at)) {
+      continue;
+    }
+
+    if (at > bestAt) {
+      best = value;
+      bestAt = at;
+    }
+  }
+
+  return best;
 }
 
 function toCollectedItem(row: ItemRow): CollectedItem {
@@ -128,7 +175,8 @@ function toCollectedItem(row: ItemRow): CollectedItem {
       rest: [],
     },
     updatedAt: row.source_updated_at ?? row.last_synced_at ?? '',
-    collectedAt: row.last_synced_at ?? '',
+    // 카드의 "11/25 10시에 확인한 재고예요" 가 가리키는 시각이다
+    collectedAt: pickStockCheckedAt(row.stock_checked_at, row.last_synced_at),
   };
 }
 

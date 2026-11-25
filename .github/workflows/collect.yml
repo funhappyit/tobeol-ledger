@@ -12,6 +12,18 @@
 #   포켓     — 상품이 드물게 늘고 요청이 260회로 무겁다. 주 1회
 #   모구모구 — 지역 한정몰이라 신상이 두 달에 한 번쯤 들어온다.
 #              요청은 3회뿐이라 가장 가볍지만 자주 받을 이유가 없다. 월 1회
+#   재고     — 이름·가격은 그대로 두고 "지금 살 수 있는지"만 다시 본다.
+#              로케일을 하나만 받으므로 공식몰 43회 + 모구모구 3회. 30분마다
+#
+# 재고를 따로 떼어낸 이유:
+#   전체 수집이 하루 1회라 "토벌 가능" 표시가 최대 24시간 묵은 값이었다.
+#   품절된 굿즈를 살 수 있다고 말하는 창이 하루치 열려 있었다.
+#   재고만 보는 스윕은 전체의 절반 무게라 30분마다 돌려도 부담이 적다.
+#
+# 30분보다 더 줄이지 못하는 이유:
+#   Actions 의 cron 은 최소 간격이 5분이고 예약 실행 지연도 흔하다.
+#   게다가 매 실행마다 checkout·npm ci 로 30~50초가 먼저 나간다.
+#   분 단위로 보려면 상주 프로세스를 띄울 곳이 필요하다(지금은 그럴 데가 없다).
 
 name: 굿즈 수집
 
@@ -21,6 +33,7 @@ on:
     - cron: '0 18 * * *' # 매일 03:00 KST — 공식몰
     - cron: '0 19 * * 6' # 일요일 04:00 KST — 포켓
     - cron: '0 20 1 * *' # 매월 1일 05:00 KST — 모구모구
+    - cron: '*/30 * * * *' # 30분마다 — 재고만
   workflow_dispatch:
     inputs:
       targets:
@@ -31,6 +44,7 @@ on:
           - official
           - pocket
           - mogumogu
+          - stock
         default: all
 
 # 수집이 겹치면 같은 표에 동시에 쓰게 된다. 앞선 실행이 끝날 때까지 기다린다
@@ -68,9 +82,10 @@ jobs:
             targets="${{ inputs.targets }}"
           else
             case "${{ github.event.schedule }}" in
-              '0 19 * * 6') targets="pocket" ;;
-              '0 20 1 * *') targets="mogumogu" ;;
-              *)            targets="official" ;;
+              '0 19 * * 6')   targets="pocket" ;;
+              '0 20 1 * *')   targets="mogumogu" ;;
+              '*/30 * * * *') targets="stock" ;;
+              *)              targets="official" ;;
             esac
           fi
           echo "targets=$targets" >> "$GITHUB_OUTPUT"
@@ -91,7 +106,19 @@ jobs:
       # 이번에 받은 수집본만 적재된다.
       # 러너는 매번 새로 뜨므로 받지 않은 쪽은 파일 자체가 없고, 적재가 건너뛴다
       - name: Supabase 적재
+        if: steps.plan.outputs.targets != 'stock'
         run: node --import tsx scripts/load-items.ts
+
+      # 재고만 보는 가벼운 바퀴. 공식몰 43회 + 모구모구 3회로 끝난다.
+      # 포켓은 재고를 애초에 못 봐서 대상이 아니다(robots.txt 가 막고 있다)
+      - name: 재고 스윕
+        if: steps.plan.outputs.targets == 'stock'
+        run: npx tsx scripts/collect-stock.ts
+
+      # in_stock·stock_checked_at 두 열만 바뀐다. 분류·정가 이력은 건드리지 않는다
+      - name: 재고 적재
+        if: steps.plan.outputs.targets == 'stock'
+        run: node --import tsx scripts/load-stock.ts
 
       # 수집이 몇 건을 가져왔는지 남긴다. 어느 날 갑자기 줄면 여기서 보인다
       - name: 결과 요약
@@ -102,7 +129,7 @@ jobs:
             echo ""
             echo "| 수집본 | 건수 |"
             echo "| --- | --- |"
-            for f in data/items.jsonl data/items-pocket.jsonl data/items-mogumogu.jsonl; do
+            for f in data/items.jsonl data/items-pocket.jsonl data/items-mogumogu.jsonl data/stock.jsonl; do
               if [ -f "$f" ]; then
                 echo "| \`$f\` | $(wc -l < "$f") |"
               fi
