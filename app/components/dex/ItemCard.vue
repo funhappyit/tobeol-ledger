@@ -106,60 +106,63 @@ const released = computed(() => {
         배경에 묻혀서, 토벌 리스트가 있는 줄도 모르고 지나치게 됐다.
         체크와 같은 꼴로 나란히 세운다.
       -->
-      <div class="absolute top-2 right-2 flex items-center gap-1.5">
-        <button
-          type="button"
-          :aria-pressed="showWish"
-          :aria-label="showWish ? `${name} 토벌 리스트에서 제외` : `${name} 토벌 리스트에 추가`"
-          :title="showWish ? '토벌 리스트에서 제외' : '토벌 리스트에 추가(사고 싶은 것)'"
-          class="flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors"
-          :class="
-            showWish
-              ? 'border-premium bg-premium text-white'
-              : 'border-border-soft bg-white/90 text-muted hover:border-premium hover:text-premium'
-          "
-          @click="emit('toggle', 'wish', item.handle)"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            class="h-4 w-4"
-            :fill="showWish ? 'currentColor' : 'none'"
+      <button
+        type="button"
+        :aria-pressed="showOwned"
+        :aria-label="showOwned ? `${name} 토벌 완료 해제` : `${name} 토벌 완료로 표시`"
+        :title="showOwned ? '토벌 완료 해제' : '토벌 완료로 표시'"
+        class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors"
+        :class="
+          showOwned
+            ? 'border-accent bg-accent text-white'
+            : 'border-border-soft bg-white/90 text-muted hover:border-accent hover:text-accent'
+        "
+        @click="emit('toggle', 'owned', item.handle)"
+      >
+        <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
+          <path
+            d="M5 10.5l3.5 3.5L15 7"
             stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 20.5l-1.4-1.3C5.8 15 3 12.4 3 9.2 3 6.7 5 4.8 7.5 4.8c1.4 0 2.8.7 3.6 1.8.8-1.1 2.2-1.8 3.6-1.8C17.2 4.8 19 6.7 19 9.2c0 3.2-2.8 5.8-7.6 10z"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
 
-        <button
-          type="button"
-          :aria-pressed="showOwned"
-          :aria-label="showOwned ? `${name} 토벌 완료 해제` : `${name} 토벌 완료로 표시`"
-          :title="showOwned ? '토벌 완료 해제' : '토벌 완료로 표시'"
-          class="flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors"
-          :class="
-            showOwned
-              ? 'border-accent bg-accent text-white'
-              : 'border-border-soft bg-white/90 text-muted hover:border-accent hover:text-accent'
-          "
-          @click="emit('toggle', 'owned', item.handle)"
+      <!--
+        토벌 리스트. 오른쪽 아래에 혼자 둔다.
+        체크 옆에 나란히 세워 봤더니 같은 원 둘이 붙어 있어 무거웠다.
+        네 귀퉁이에 하나씩 놓이면 서로 자리를 다투지 않는다.
+      -->
+      <button
+        type="button"
+        :aria-pressed="showWish"
+        :aria-label="showWish ? `${name} 토벌 리스트에서 제외` : `${name} 토벌 리스트에 추가`"
+        :title="showWish ? '토벌 리스트에서 제외' : '토벌 리스트에 추가(사고 싶은 것)'"
+        class="absolute right-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors"
+        :class="
+          showWish
+            ? 'border-premium bg-premium text-white'
+            : 'border-border-soft bg-white/90 text-muted hover:border-premium hover:text-premium'
+        "
+        @click="emit('toggle', 'wish', item.handle)"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="h-4 w-4"
+          :fill="showWish ? 'currentColor' : 'none'"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
         >
-          <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
-            <path
-              d="M5 10.5l3.5 3.5L15 7"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
+          <path
+            d="M12 20.5l-1.4-1.3C5.8 15 3 12.4 3 9.2 3 6.7 5 4.8 7.5 4.8c1.4 0 2.8.7 3.6 1.8.8-1.1 2.2-1.8 3.6-1.8C17.2 4.8 19 6.7 19 9.2c0 3.2-2.8 5.8-7.6 10z"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
 
       <!--
         왼쪽 위 배지들. 공식몰 굿즈에는 출처를 적지 않는다(대부분이 공식몰이라 소음이 된다).
