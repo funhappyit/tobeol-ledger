@@ -49,12 +49,28 @@ const SOURCE_NAMES: Record<ItemSource, string> = {
 };
 
 /** 굿즈 출처의 표시 이름. 모르는 값이면 null */
+/**
+ * 스토어 이름. 공식몰도 이름 그대로 돌려준다.
+ *
+ * 카드 배지용인 `sourceName` 과 나눠 둔다. 그쪽은 공식몰일 때 일부러 null 을 주는데,
+ * 이름이 필요한 자리에서 그걸 쓰면 `official` 이라는 코드가 화면에 그대로 나온다.
+ */
+export function storeName(source: ItemSource): string {
+  return SOURCE_NAMES[source] ?? source;
+}
+
+/**
+ * 카드 배지에 쓸 스토어 이름.
+ *
+ * 공식몰은 null 이다. 1만 건 중 대부분이 공식몰이라 배지를 달면 소음이 된다.
+ * 이름 자체가 필요하면 `storeName` 을 쓴다.
+ */
 export function sourceName(source: ItemSource | undefined): string | null {
   if (!source || source === 'official') {
     return null;
   }
 
-  return SOURCE_NAMES[source] ?? null;
+  return storeName(source);
 }
 
 /** 캐릭터 코드의 한국어 이름. 모르는 코드면 코드 그대로 */

@@ -9,7 +9,7 @@
  * 전부 그리면 조건을 바꿀 때마다 화면이 멎는다. 끊어서 그리고 "더 보기"로 이어 붙인다.
  */
 
-import { categoryName, sourceName } from '@lib/items/labels';
+import { categoryName, storeName } from '@lib/items/labels';
 import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -178,7 +178,7 @@ const stockNotice = computed(() => {
     }
 
     const when = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}시`;
-    return [`${sourceName(source) ?? source} ${when}`];
+    return [`${storeName(source)} ${when}`];
   });
 
   if (parts.length === 0) {
