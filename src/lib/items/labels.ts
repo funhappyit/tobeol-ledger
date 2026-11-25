@@ -105,3 +105,22 @@ export function formatDate(value: string | null): string | null {
 
   return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 }
+
+/**
+ * 재고를 언제 본 값인지. `11/25 10시` 꼴.
+ *
+ * 도감 필터 안내와 카드 알약이 같은 글자를 써야 해서 한곳에 둔다.
+ * 수집 주기가 하루~한 달이라 "지금"이라고 말할 수 없으니, 언제 본 값인지 늘 함께 밝힌다.
+ */
+export function formatCheckedAt(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}시`;
+}

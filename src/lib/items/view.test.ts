@@ -182,25 +182,26 @@ describe('packDexItems / unpackDexItems', () => {
 });
 
 describe('재고', () => {
-  it('살 수 있는 굿즈만 inStock 을 싣는다', () => {
+  it('살 수 있으면 true', () => {
     assert.equal(toDexItem(sample({ inStock: true })).inStock, true);
   });
 
   /**
-   * 품절이 열에 아홉이라 false 를 실으면 그것만으로 응답이 커진다.
-   * 화면이 쓰는 것은 "아직 살 수 있다" 하나뿐이다.
+   * 카드가 "품절"과 "모름"을 갈라 보여야 해서 품절도 싣는다.
+   * 1만 건이 늘지만 `"inStock":false` 가 반복되는 꼴이라 brotli 기준 1.1KB 다.
    */
-  it('품절은 응답에 실리지 않는다', () => {
-    const item = toDexItem(sample({ inStock: false }));
-
-    assert.equal(item.inStock, undefined);
-    assert.ok(!JSON.stringify(item).includes('inStock'));
+  it('품절이면 false 로 싣는다', () => {
+    assert.equal(toDexItem(sample({ inStock: false })).inStock, false);
   });
 
-  it('모르는 것도 실리지 않는다. 품절과 구분은 수집본에만 남는다', () => {
+  /**
+   * 키가 없는 것이 "모름"이어야 안전하다.
+   * 반대로 두면 값을 안 실어 보내는 스토어가 전부 품절로 보인다.
+   */
+  it('모르면 키를 통째로 뺀다', () => {
     const item = toDexItem(sample({ inStock: null }));
 
     assert.equal(item.inStock, undefined);
     assert.ok(!JSON.stringify(item).includes('inStock'));
   });
-})
+});

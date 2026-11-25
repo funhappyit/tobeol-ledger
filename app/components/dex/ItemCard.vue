@@ -7,7 +7,7 @@
  */
 
 import { withImageWidth } from '@lib/items/image';
-import { formatJpy, sourceName } from '@lib/items/labels';
+import { formatCheckedAt, formatJpy, sourceName } from '@lib/items/labels';
 import type { DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -17,6 +17,8 @@ const props = defineProps<{
   wish: boolean;
   /** 기록을 읽기 전에는 표시를 켜지 않는다 (서버 렌더와 어긋나지 않게) */
   ready: boolean;
+  /** 스토어별로 재고를 마지막으로 확인한 시각 */
+  stockCheckedAt?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -30,6 +32,38 @@ const showOwned = computed(() => props.ready && props.owned);
 const showWish = computed(() => props.ready && props.wish);
 /** 공식몰 외의 스토어에서 온 굿즈만 출처를 띄운다 */
 const store = computed(() => sourceName(props.item.source));
+
+/**
+ * 재고 표시.
+ *
+ * 값이 없으면 아무것도 띄우지 않는다. 포켓 스토어가 그렇다.
+ * 모르는 것을 품절로 적으면 없는 사실을 지어내는 것이 된다.
+ */
+const stock = computed(() => {
+  if (props.item.inStock === undefined) {
+    return null;
+  }
+
+  return props.item.inStock
+    ? { label: '토벌 가능', buyable: true }
+    : { label: '품절', buyable: false };
+});
+
+/**
+ * 언제 본 값인지.
+ *
+ * 수집 주기가 하루(공식몰)에서 한 달(모구모구)까지라 "지금"이라고 말할 수 없다.
+ * 품절이라 적혀 있는데 이미 재입고된 경우가 생기므로 기준 시각을 함께 밝힌다.
+ */
+const stockTitle = computed(() => {
+  const when = formatCheckedAt(props.stockCheckedAt?.[props.item.source ?? 'official']);
+
+  if (when === null) {
+    return '수집한 시점의 재고예요';
+  }
+
+  return `${when}에 확인한 재고예요`;
+});
 
 /** 발매일을 카드에 짧게 (2022.07 발매) */
 const released = computed(() => {
@@ -115,6 +149,20 @@ const released = computed(() => {
           1인 {{ item.purchaseLimit }}개
         </span>
       </div>
+
+      <!--
+        재고. 표시가 없으면 "모른다"는 뜻이다(포켓 스토어).
+        바탕은 위 배지들과 같은 고정색이다. 상품 사진 위라 테마 토큰을 쓸 자리가 아니다.
+      -->
+      <span
+        v-if="stock"
+        :title="stockTitle"
+        class="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium shadow-sm"
+        :class="stock.buyable ? 'text-white' : 'text-white/60'"
+      >
+        <span v-if="stock.buyable" class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+        {{ stock.label }}
+      </span>
     </div>
 
     <div class="flex flex-1 flex-col gap-1.5 p-3">

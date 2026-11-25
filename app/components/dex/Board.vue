@@ -9,7 +9,7 @@
  * 전부 그리면 조건을 바꿀 때마다 화면이 멎는다. 끊어서 그리고 "더 보기"로 이어 붙인다.
  */
 
-import { categoryName, storeName } from '@lib/items/labels';
+import { categoryName, formatCheckedAt, storeName } from '@lib/items/labels';
 import { buildSearchText, type DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -167,18 +167,8 @@ const stockNotice = computed(() => {
 
   // 재고를 확인할 수 있는 스토어만. 포켓은 값 자체가 없다
   const parts = (['official', 'mogumogu'] as const).flatMap((source) => {
-    const at = seen[source];
-    if (at === undefined) {
-      return [];
-    }
-
-    const date = new Date(at);
-    if (Number.isNaN(date.getTime())) {
-      return [];
-    }
-
-    const when = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}시`;
-    return [`${storeName(source)} ${when}`];
+    const when = formatCheckedAt(seen[source]);
+    return when === null ? [] : [`${storeName(source)} ${when}`];
   });
 
   if (parts.length === 0) {
@@ -372,6 +362,7 @@ function pickCategory(code: string | null): void {
           :owned="owned.has(item.handle)"
           :wish="wish.has(item.handle)"
           :ready="ready"
+          :stock-checked-at="stockCheckedAt"
           @toggle="onToggle"
           @record="openRecord"
         />

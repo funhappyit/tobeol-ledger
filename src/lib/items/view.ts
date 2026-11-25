@@ -34,13 +34,15 @@ export interface DexItem {
    */
   source?: ItemSource;
   /**
-   * 수집 시점에 살 수 있었던 굿즈에만 들어 있다.
+   * 수집 시점에 살 수 있었는지.
    *
-   * 품절(false)과 모름(null)은 키를 통째로 생략한다.
-   * 공식몰 표본 750건 중 93%가 품절이라 그쪽을 실어 보내면 응답만 커지는데,
-   * 화면이 쓰는 것은 "아직 살 수 있다" 하나뿐이다.
+   * 모를 때만 키를 생략한다. 키가 없는 것이 "모름"이어야 안전하기 때문이다.
+   * 반대로 두면 값을 안 실어 보내는 스토어가 전부 품절로 보이게 된다.
+   *
+   * 품절이 1만 건이라 응답이 커질까 싶지만 실제로는 brotli 기준 1.1KB 늘었다.
+   * `"inStock":false` 가 그대로 반복되는 꼴이라 압축이 거의 다 지운다.
    */
-  inStock?: true;
+  inStock?: boolean;
   /**
    * 검색 대조용 태그. 원본 태그를 소문자로 이어 붙인 것.
    *
@@ -63,8 +65,8 @@ export function toDexItem(item: CollectedItem): DexItem {
     purchaseLimit: item.parsed.purchaseLimit,
     // undefined 인 키는 JSON 에 실리지 않는다. 공식몰 굿즈는 이 항목을 통째로 생략한다
     source: item.source === 'official' ? undefined : item.source,
-    // true 일 때만 싣는다. 품절과 모름은 화면에서 쓰지 않는다
-    inStock: item.inStock === true ? true : undefined,
+    // 모를 때만 뺀다. 카드가 "품절"과 "모름"을 갈라 보여야 하기 때문이다
+    inStock: item.inStock ?? undefined,
     tags: item.tagsRaw.join(' ').toLowerCase(),
   };
 }
