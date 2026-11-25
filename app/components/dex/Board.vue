@@ -157,6 +157,30 @@ const visible = computed(() => {
 const rendered = computed(() => visible.value.slice(0, shown.value));
 const remaining = computed(() => visible.value.length - rendered.value.length);
 
+/**
+ * 결과가 0건일 때 할 말.
+ *
+ * 나머지를 받는 중에는 "없습니다"라고 하면 안 된다. 첫 120건은 발매일 최신순이라
+ * 전부 공식몰 굿즈여서, 그 사이에 스토어 필터를 누르면 0건이 된다.
+ * 없는 것이 아니라 아직 안 온 것인데 "없습니다"라고 하면 고장으로 읽힌다.
+ */
+const emptyMessage = computed(() => {
+  if (!props.indexing) {
+    return '조건에 맞는 굿즈가 없습니다.';
+  }
+
+  const store = SOURCE_FILTERS.find((filter) => filter.value === sourceFilter.value);
+  const waiting = sourceFilter.value === 'all' ? undefined : props.sourceCounts?.[sourceFilter.value];
+  const noneYet = !props.items.some((item) => (item.source ?? 'official') === sourceFilter.value);
+
+  // 그 스토어 굿즈가 아직 한 건도 안 왔다면 몇 건이 올지 서버가 알려 준 값으로 말해 준다
+  if (store && waiting !== undefined && waiting > 0 && noneYet) {
+    return `${store.label} ${waiting.toLocaleString()}개를 불러오는 중이에요. 잠시만요`;
+  }
+
+  return '나머지 굿즈를 불러오는 중이에요. 잠시만요';
+});
+
 // 조건이 바뀌면 처음부터 다시 그린다
 watch([query, category, ownedFilter, sourceFilter, inStockOnly], () => {
   shown.value = PAGE_SIZE;
@@ -261,7 +285,12 @@ function pickCategory(code: string | null): void {
           placeholder="이름, 일본어, 태그로 찾기"
           class="w-full rounded-full border border-border-soft bg-background px-4 py-2 text-sm outline-none focus:border-accent"
         >
-        <span v-if="indexing" class="mt-1 block px-4 text-xs text-muted" aria-live="polite">
+        <!-- 결과가 0건이면 아래 빈 자리에 같은 말이 크게 나오므로 여기서는 비켜 준다 -->
+        <span
+          v-if="indexing && visible.length > 0"
+          class="mt-1 block px-4 text-xs text-muted"
+          aria-live="polite"
+        >
           나머지 굿즈를 불러오는 중이에요. 지금은 {{ items.length.toLocaleString() }}개 안에서 찾아요
         </span>
       </label>
@@ -328,8 +357,9 @@ function pickCategory(code: string | null): void {
     <p
       v-if="visible.length === 0"
       class="rounded-2xl border border-dashed border-border-soft p-10 text-center text-muted"
+      :aria-live="indexing ? 'polite' : undefined"
     >
-      조건에 맞는 굿즈가 없습니다.
+      {{ emptyMessage }}
     </p>
 
     <template v-else>
