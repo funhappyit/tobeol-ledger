@@ -99,6 +99,49 @@ export default defineEventHandler(async (event): Promise<DexResponse> => {
     throw createError({ statusCode: 404, statusMessage: '없는 캐릭터입니다' });
   }
 
+  /**
+   * 응답을 엣지(CDN)에 맡긴다.
+   *
+   * ── 왜 필요한가
+   *
+   * 이 핸들러는 굿즈 전량을 DB 에서 읽는다. PostgREST 가 한 번에 1000행까지만 주므로
+   * 1만 1천 건이면 12번 왕복이고, 실측 8.0초다(첫 왕복 2.7초, 나머지 300~900ms).
+   * 람다 안에 메모리 캐시를 두고 있지만 그것은 인스턴스 하나에만 산다.
+   * 인스턴스가 새로 뜨면 빈 상태로 시작하므로 콜드 요청이 16초였다.
+   *
+   * 엣지가 응답을 들고 있으면 람다를 아예 깨우지 않는다. 캐시 키는 URL 전체라
+   * 쿼리가 다르면 다른 칸에 들어간다.
+   *
+   * ── 왜 routeRules 가 아니라 헤더인가
+   *
+   * 예전에 `'/api/dex': { swr: 300 }` 을 걸었더니 쿼리가 무시됐다.
+   * routeRules 의 swr·isr 은 Vercel 의 prerender 설정으로 내려가고, 그쪽 allowQuery 는
+   * "빈 배열이면 쿼리 값을 캐시에 고려하지 않는다"고 되어 있다. 그 경로를 탄 것이다.
+   *
+   * 응답 헤더는 prerender 를 타지 않고 평범한 CDN 캐시를 쓴다. 캐시 키 문서에
+   * "쿼리스트링은 정적 파일에서만 무시된다"고 적혀 있다.
+   *
+   * ── 숫자를 이렇게 고른 이유
+   *
+   * s-maxage=300 은 페이지 ISR(5분)과 맞춘 값이다. 재고 수집이 30분마다이므로
+   * 5분이면 충분히 촘촘하다.
+   *
+   * stale-while-revalidate=600 은 만료 뒤를 위한 것이다. 이것이 없으면 5분마다
+   * 누군가 한 명이 16초를 기다린다. 두면 그 사람도 묵은 값을 즉시 받고 갱신은
+   * 배경에서 돈다.
+   *
+   * s-maxage 는 Vercel 이 먹고 브라우저에는 전달하지 않는다. 그래서 브라우저는
+   * 늘 재검증하고, 캐시는 엣지에만 생긴다.
+   *
+   * ── 공개 캐시로 두어도 되는 근거
+   *
+   * 이 응답에는 개인 자료가 없다. 굿즈 목록·건수·통화·재고 확인 시각뿐이다.
+   * 토벌 표시는 브라우저가 따로 읽고, 머리글의 로그인 표시도 브라우저에서만 그린다.
+   *
+   * 404 는 이 줄보다 먼저 던지므로 캐시되지 않는다. 의도한 것이다.
+   */
+  setResponseHeader(event, 'cache-control', 'public, s-maxage=300, stale-while-revalidate=600');
+
   const { items, currencies } = await getItems();
 
   if (countsOnly) {
