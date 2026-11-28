@@ -7,7 +7,7 @@
  */
 
 import { withImageWidth } from '@lib/items/image';
-import { formatCheckedAt, formatJpy, sourceName } from '@lib/items/labels';
+import { formatCheckedAt, formatJpy, sourceName, storeProductUrl } from '@lib/items/labels';
 import type { DexItem } from '@lib/items/view';
 import type { MarkKind } from '~/composables/useMarks';
 
@@ -32,6 +32,20 @@ const showOwned = computed(() => props.ready && props.owned);
 const showWish = computed(() => props.ready && props.wish);
 /** 공식몰 외의 스토어에서 온 굿즈만 출처를 띄운다 */
 const store = computed(() => sourceName(props.item.source));
+
+/**
+ * 파는 곳의 상세 주소.
+ *
+ * 응답에는 주소가 없다. 출처와 handle 로 여기서 만든다(labels.ts 참고).
+ *
+ * 새 탭으로 연다. 도감은 첫 120건만 받고 나머지 1만여 건을 배경으로 받는데,
+ * 같은 탭으로 나가면 돌아올 때 그 수신과 스크롤 위치를 처음부터 다시 치른다.
+ *
+ * 주소를 만들 수 없으면(모르는 출처) 링크를 걸지 않는다.
+ * 공식몰에서 빠진 굿즈는 우리 쪽에 남아 있어서 404 가 날 수 있는데,
+ * 지금은 사라진 시점을 기록하지 않으므로 걸러낼 방법이 없다.
+ */
+const productUrl = computed(() => storeProductUrl(props.item.source, props.item.handle));
 
 /**
  * 재고 표시.
@@ -97,6 +111,26 @@ const released = computed(() => {
       <div v-else class="flex h-full items-center justify-center text-sm text-muted">
         이미지 없음
       </div>
+
+      <!--
+        사진 전체를 누를 수 있게 덧씌우는 링크.
+
+        `<a>` 안에 `<button>` 을 넣는 것은 잘못된 HTML 이다. 체크·하트가 사진 위에 있어서
+        카드를 통째로 감쌀 수 없다. 그래서 같은 높이에 나란히 두고, 이 링크를
+        버튼들보다 DOM 앞에 둔다. 뒤에 오는 버튼이 위에 그려지므로 클릭을 가로채지 않는다.
+
+        포커스에서 빼고 스크린리더에서도 감춘다. 같은 곳으로 가는 링크는 아래
+        이름 쪽에 하나 있고, 보조기기에는 그 하나만 보이면 된다.
+      -->
+      <a
+        v-if="productUrl"
+        :href="productUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        tabindex="-1"
+        aria-hidden="true"
+        class="absolute inset-0"
+      />
 
       <!--
         토벌 완료와 토벌 리스트. 이 앱의 주 동작이라 늘 보이게 둔다.
@@ -168,7 +202,7 @@ const released = computed(() => {
         왼쪽 위 배지들. 공식몰 굿즈에는 출처를 적지 않는다(대부분이 공식몰이라 소음이 된다).
         포켓 스토어처럼 다른 스토어에서 온 굿즈만 어디서 파는 것인지 밝힌다.
       -->
-      <div class="absolute top-2 left-2 flex flex-col items-start gap-1">
+      <div class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1">
         <span
           v-if="store"
           class="rounded-full bg-accent/90 px-2 py-0.5 text-xs font-medium text-white"
@@ -204,7 +238,23 @@ const released = computed(() => {
     </div>
 
     <div class="flex flex-1 flex-col gap-1.5 p-3">
-      <h3 class="line-clamp-2 text-sm leading-snug font-semibold">{{ name }}</h3>
+      <!--
+        파는 곳으로 가는 진짜 링크. 포커스를 받는 것은 이 하나다.
+        사진 쪽 덧링크는 마우스 편의용이라 보조기기에서 감춰 두었다.
+      -->
+      <h3 class="line-clamp-2 text-sm leading-snug font-semibold">
+        <a
+          v-if="productUrl"
+          :href="productUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          :title="`${name} — 파는 곳에서 보기 (새 탭)`"
+          class="hover:underline"
+        >
+          {{ name }}
+        </a>
+        <template v-else>{{ name }}</template>
+      </h3>
 
       <p v-if="released" class="text-xs text-muted">{{ released }}</p>
 

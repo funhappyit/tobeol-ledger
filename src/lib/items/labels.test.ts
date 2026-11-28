@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatCheckedAt, sourceName, storeName } from './labels';
+import { formatCheckedAt, sourceName, storeName, storeProductUrl } from './labels';
 
 /**
  * 이 묶음은 `TZ=UTC` 로도 돌려야 의미가 있다.
@@ -73,5 +73,55 @@ describe('storeName / sourceName — 스토어 이름', () => {
     for (const source of ['pocket', 'mogumogu'] as const) {
       assert.equal(storeName(source), sourceName(source));
     }
+  });
+});
+
+describe('storeProductUrl — 스토어 상세 주소', () => {
+  it('공식몰은 한국어 경로로 보낸다', () => {
+    assert.equal(
+      storeProductUrl('official', '4536117053876'),
+      'https://chiikawamarket.jp/ko/products/4536117053876',
+    );
+  });
+
+  it('source 가 없으면 공식몰로 본다', () => {
+    // 공식몰 굿즈는 응답에서 source 를 통째로 생략한다(DexItem)
+    assert.equal(
+      storeProductUrl(undefined, '4536117053876'),
+      'https://chiikawamarket.jp/ko/products/4536117053876',
+    );
+  });
+
+  it('모구모구는 일본어 경로뿐이라 접두어가 없다', () => {
+    assert.equal(
+      storeProductUrl('mogumogu', 'cmh025-03'),
+      'https://chiikawamogumogu.shop/products/cmh025-03',
+    );
+  });
+
+  it('포켓도 같은 경로 모양이다', () => {
+    assert.equal(
+      storeProductUrl('pocket', 'b75cc1e26d57488cf85f66f3f2d684f6'),
+      'https://chiikawa-pocket-goods-store.com/products/b75cc1e26d57488cf85f66f3f2d684f6',
+    );
+  });
+
+  it('handle 의 특수문자를 그대로 내보내지 않는다', () => {
+    assert.equal(
+      storeProductUrl('official', 'a b/c?d'),
+      'https://chiikawamarket.jp/ko/products/a%20b%2Fc%3Fd',
+    );
+  });
+
+  it('handle 이 없으면 null 이다', () => {
+    // 카드는 null 이면 링크를 걸지 않는다
+    assert.equal(storeProductUrl('official', null), null);
+    assert.equal(storeProductUrl('official', undefined), null);
+    assert.equal(storeProductUrl('official', ''), null);
+  });
+
+  it('모르는 출처면 null 이다', () => {
+    // 짐작한 주소로 내보내면 엉뚱한 곳으로 보내게 된다
+    assert.equal(storeProductUrl('weird' as never, '123'), null);
   });
 });

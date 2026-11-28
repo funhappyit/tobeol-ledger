@@ -48,6 +48,48 @@ const SOURCE_NAMES: Record<ItemSource, string> = {
   mogumogu: '모구모구',
 };
 
+/**
+ * 스토어별 상품 상세 주소의 앞부분.
+ *
+ * 세 스토어 모두 `{앞부분}/products/{handle}` 꼴이다. 공식몰만 한국어 경로(`/ko`)가 있고,
+ * 모구모구는 일본어뿐이며 포켓은 Shopify 가 아니지만 경로 모양은 같다.
+ *
+ * 스토어 사실을 이 파일에 모아 둔다. 화면마다 주소를 박으면 스토어가 하나 늘 때
+ * 고칠 자리를 찾아다니게 된다.
+ */
+const STORE_ORIGINS: Record<ItemSource, string> = {
+  official: 'https://chiikawamarket.jp/ko',
+  pocket: 'https://chiikawa-pocket-goods-store.com',
+  mogumogu: 'https://chiikawamogumogu.shop',
+};
+
+/**
+ * 굿즈의 스토어 상세 주소.
+ *
+ * 응답에 주소를 싣지 않고 여기서 만든다. `source` 와 `handle` 은 화면이 이미 들고 있고,
+ * 1만 1천 건에 주소를 실으면 그것만으로 응답이 수백 KB 늘어난다.
+ * 이미지 주소를 접두어 사전으로 쪼개 둔 것과 같은 이유다(view.ts 의 packDexItems).
+ *
+ * `source` 가 없으면 공식몰이다(DexItem 참고). 모르는 출처면 null 을 주고,
+ * 카드는 링크를 걸지 않는다. 짐작한 주소로 내보내면 엉뚱한 곳으로 보내게 된다.
+ */
+export function storeProductUrl(
+  source: ItemSource | undefined,
+  handle: string | null | undefined,
+): string | null {
+  if (!handle) {
+    return null;
+  }
+
+  const origin = STORE_ORIGINS[source ?? 'official'];
+  if (!origin) {
+    return null;
+  }
+
+  // handle 에 경로에서 뜻을 갖는 글자가 섞여 있어도 그대로 나가지 않게 한다
+  return `${origin}/products/${encodeURIComponent(handle)}`;
+}
+
 /** 굿즈 출처의 표시 이름. 모르는 값이면 null */
 /**
  * 스토어 이름. 공식몰도 이름 그대로 돌려준다.
